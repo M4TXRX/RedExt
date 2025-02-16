@@ -1,0 +1,182 @@
+<!-- templates/data.html -->
+
+{% extends "base.html" %}
+{% block title %}Data Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6 p-4 md:p-6 max-w-[2000px] mx-auto">
+  <!-- Header Section -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-red-500/10 p-6 shadow-lg shadow-red-500/5">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="bg-black/30 p-3 rounded-lg ring-1 ring-red-500/20">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-100">Data Operations</h1>
+          <p class="text-gray-400 text-sm mt-1">Real-time data exfiltration monitoring</p>
+        </div>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+        <select id="sortOrder" 
+                class="bg-black/30 text-gray-100 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 border border-gray-700/50">
+          <option value="data">Most Data</option>
+          <option value="recent">Recently Active</option>
+        </select>
+        <div class="relative flex-1 sm:flex-none">
+          <input type="text" 
+                 id="agentSearch" 
+                 placeholder="Search agents or data types..." 
+                 class="w-full bg-black/30 text-gray-100 pl-10 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 border border-gray-700/50">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if group_by_agent %}
+    <div id="agentGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for agent_id, records in group_by_agent.items()|sort(attribute='1|length', reverse=true) %}
+        {% set latest_record = records|first %}
+        <div class="agent-card group bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50 hover:border-red-500/50 transition-all duration-300 relative"
+             data-records="{{ records|length }}"
+             data-latest="{{ latest_record.created_at }}">
+          <div class="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+          
+          <!-- Agent Header -->
+          <div class="relative">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h2 class="text-xl font-bold text-gray-100 font-mono">
+                  {{ latest_record.hostname or agent_id }}
+                </h2>
+                <div class="flex items-center gap-3 mt-2">
+                  <span class="text-sm px-3 py-1 rounded-full bg-gray-900/80 text-gray-400 font-mono">
+                    {{ records|length }} records
+                  </span>
+                  <span class="flex items-center text-sm text-gray-400 gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ latest_record.created_at|format_timestamp }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Types Grid -->
+          <div class="relative grid grid-cols-1 gap-3">
+            {% set data_types = records|map(attribute='data_type')|list|unique|list %}
+            {% for type in data_types %}
+              {% set type_count = records|selectattr('data_type', 'equalto', type)|list|length %}
+              <a href="{{ url_for('view_data_type', agent_id=agent_id, data_type=type|upper) }}" 
+                 class="group/item flex items-center justify-between p-3 rounded-lg transition-all duration-200
+                    {% if type|lower == 'take_screenshot' %}bg-blue-900/30 hover:bg-blue-800/50 ring-1 ring-blue-500/30
+                    {% elif type|lower == 'domsnapshot' %}bg-green-900/30 hover:bg-green-800/50 ring-1 ring-green-500/30
+                    {% elif type|lower == 'clipboardcapture' %}bg-yellow-900/30 hover:bg-yellow-800/50 ring-1 ring-yellow-500/30
+                    {% elif type|lower == 'cookies' %}bg-purple-900/30 hover:bg-purple-800/50 ring-1 ring-purple-500/30
+                    {% elif type|lower == 'history' %}bg-orange-900/30 hover:bg-orange-800/50 ring-1 ring-orange-500/30
+                    {% elif type|lower == 'enumeration' %}bg-purple-900/30 hover:bg-purple-800/50 ring-1 ring-purple-500/30
+                    {% else %}bg-gray-900/30 hover:bg-gray-800/50 ring-1 ring-gray-500/30{% endif %}">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 rounded-lg bg-black/30">
+                    {% if type == 'take_screenshot' %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    {% elif type == 'history' %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    {% elif type == 'domsnapshot' %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                    {% elif type == 'enumeration' %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                      </svg>
+                    {% else %}
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <span class="font-medium text-sm">{{ type|capitalize }}</span>
+                    <span class="text-xs text-gray-400 block">{{ type_count }} entries</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs px-2 py-1 rounded-full bg-black/30">View</span>
+                  <svg class="w-4 h-4 transform transition-transform group-hover/item:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-red-500/10 p-8 text-center">
+      <svg class="w-16 h-16 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <p class="mt-4 text-gray-400">No agents with data available.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('agentSearch');
+  const sortSelect = document.getElementById('sortOrder');
+  const agentGrid = document.getElementById('agentGrid');
+
+  function sortAgents(order) {
+    const cards = Array.from(document.querySelectorAll('.agent-card'));
+    cards.sort((a, b) => {
+      if (order === 'data') {
+        return parseInt(b.dataset.records) - parseInt(a.dataset.records);
+      } else {
+        return new Date(b.dataset.latest) - new Date(a.dataset.latest);
+      }
+    });
+    cards.forEach(card => agentGrid.appendChild(card));
+  }
+
+  sortSelect.addEventListener('change', (e) => {
+    sortAgents(e.target.value);
+  });
+
+  searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    document.querySelectorAll('.agent-card').forEach(card => {
+      const agentId = card.querySelector('h2').textContent.toLowerCase();
+      const types = Array.from(card.querySelectorAll('span'))
+                       .map(span => span.textContent.toLowerCase());
+      
+      if (agentId.includes(searchTerm) || types.some(t => t.includes(searchTerm))) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+
+  // Initial sort
+  sortAgents('data');
+});
+</script>
+{% endblock %}

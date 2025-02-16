@@ -1,0 +1,359 @@
+{% extends "data_type_base.html" %}
+
+{% block type_specific_content %}
+<div class="space-y-6">
+  <!-- Search and Stats Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Search Bar -->
+    <div class="lg:col-span-2">
+      <div class="relative">
+        <input type="text" 
+               id="storageSearch" 
+               placeholder="Search keys or values..." 
+               class="w-full bg-gray-800 text-gray-100 pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-700/50">
+        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="bg-gray-800 rounded-lg p-4 flex items-center justify-between border border-gray-700/50">
+      <span class="text-gray-400">Total Items</span>
+      <span class="text-xl font-bold text-purple-400" id="totalItems">0</span>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 flex items-center justify-between border border-gray-700/50">
+      <span class="text-gray-400">Domains</span>
+      <span class="text-xl font-bold text-purple-400" id="totalDomains">0</span>
+    </div>
+  </div>
+
+  <!-- Storage Cards - Updated for default collapsed state -->
+  <div class="space-y-6" id="storageContainer">
+    {% for record in records %}
+      {% set payload = record.payload|from_json %}
+      <div class="storage-card bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-purple-500/10"
+           data-items="{{ payload.storage|length }}">
+        <!-- Domain Header - Updated with collapse/expand -->
+        <div class="p-4 border-b border-gray-700 bg-gray-750 cursor-pointer group"
+             onclick="toggleDomain(this)">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <div class="bg-purple-500/10 p-2 rounded-lg transition-transform duration-300 transform rotate-0">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-medium text-gray-200">
+                  {{ payload.location }}
+                </h3>
+                <p class="text-sm text-gray-400 mt-1">{{ record.timestamp|format_datetime }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-sm bg-purple-900/50 px-3 py-1 rounded-full border border-purple-500/20">
+                {{ payload.storage|length }} items
+              </span>
+              <span class="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Click to expand
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage Content - Hidden by default -->
+        <div class="domain-content hidden">
+          <div class="p-4">
+            <!-- Domain Actions -->
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex items-center gap-2">
+                <button onclick="toggleAllItems(this)" 
+                        class="text-xs bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-purple-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <span>Toggle All Items</span>
+                </button>
+                <button onclick="exportDomainData(this)" 
+                        class="text-xs bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-blue-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>Export</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Storage Items Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {% for key, value in payload.storage.items() %}
+                <div class="storage-item group bg-gray-750 rounded-lg transition-all duration-300 cursor-pointer"
+                     data-key="{{ key|lower }}" 
+                     data-value="{{ value|string|lower }}"
+                     onclick="toggleItem(this)">
+                  <!-- Item Header -->
+                  <div class="p-4 flex justify-between items-start">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium text-purple-400 truncate">{{ key }}</p>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
+                          {{ value|length }} chars
+                        </span>
+                      </div>
+                      <p class="text-xs text-gray-500 mt-1 truncate">{{ value[:100] }}{% if value|length > 100 %}...{% endif %}</p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                      <button onclick="copyToClipboard('{{ value|tojson }}', event)" 
+                              class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Expandable Content -->
+                  <div class="hidden storage-content border-t border-gray-700/50">
+                    <div class="p-4">
+                      <div class="relative">
+                        <pre class="text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto bg-gray-800/50 rounded p-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">{{ value }}</pre>
+                        {% if value|length > 500 %}
+                          <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-750 to-transparent pointer-events-none"></div>
+                        {% endif %}
+                      </div>
+                      <!-- Value Actions -->
+                      <div class="mt-4 flex gap-2">
+                        <button onclick="prettifyJSON(this, event)" 
+                                class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded transition-colors">
+                          Format JSON
+                        </button>
+                        <button onclick="decodeBase64(this, event)" 
+                                class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded transition-colors">
+                          Decode Base64
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('storageSearch');
+  const storageContainer = document.getElementById('storageContainer');
+  const totalItemsElement = document.getElementById('totalItems');
+  const totalDomainsElement = document.getElementById('totalDomains');
+  
+  // Update stats
+  function updateStats() {
+    const visibleCards = document.querySelectorAll('.storage-card:not([style*="display: none"])');
+    const totalItems = Array.from(visibleCards).reduce((sum, card) => sum + parseInt(card.dataset.items), 0);
+    
+    totalItemsElement.textContent = totalItems;
+    totalDomainsElement.textContent = visibleCards.length;
+  }
+  
+  // Initialize stats
+  updateStats();
+  
+  // Enhanced search functionality
+  searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    let hasVisibleItems = false;
+    
+    document.querySelectorAll('.storage-card').forEach(card => {
+      const content = card.querySelector('.domain-content');
+      const header = card.querySelector('.bg-gray-750');
+      const hasMatch = card.textContent.toLowerCase().includes(searchTerm);
+      
+      card.style.display = hasMatch ? '' : 'none';
+      
+      // Auto-expand on search match
+      if (hasMatch && searchTerm.length > 0) {
+        content.classList.remove('hidden');
+        header.querySelector('svg').parentElement.style.transform = 'rotate(180deg)';
+      } else if (searchTerm.length === 0) {
+        content.classList.add('hidden');
+        header.querySelector('svg').parentElement.style.transform = 'rotate(0deg)';
+      }
+    });
+    
+    updateStats();
+    
+    // Show no results message if needed
+    const noResultsMsg = document.getElementById('noResultsMessage');
+    if (!hasVisibleItems && searchTerm) {
+      if (!noResultsMsg) {
+        const msg = document.createElement('div');
+        msg.id = 'noResultsMessage';
+        msg.className = 'text-center py-8 text-gray-400';
+        msg.innerHTML = `
+          <svg class="w-12 h-12 mx-auto text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p>No matching storage items found</p>
+        `;
+        storageContainer.appendChild(msg);
+      }
+    } else if (noResultsMsg) {
+      noResultsMsg.remove();
+    }
+  });
+});
+
+function copyToClipboard(value, event) {
+  event.stopPropagation();
+  navigator.clipboard.writeText(value).then(() => {
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed bottom-4 right-4 bg-green-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300';
+    notification.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span>Copied to clipboard!</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.classList.remove('translate-y-20', 'opacity-0');
+    }, 100);
+    
+    // Animate out
+    setTimeout(() => {
+      notification.classList.add('translate-y-20', 'opacity-0');
+      setTimeout(() => notification.remove(), 300);
+    }, 2000);
+  });
+}
+
+function toggleItem(element) {
+  const content = element.querySelector('.storage-content');
+  content.classList.toggle('hidden');
+  element.classList.toggle('ring-2');
+  element.classList.toggle('ring-purple-500/50');
+}
+
+function toggleAllItems(button) {
+  const card = button.closest('.storage-card');
+  const items = card.querySelectorAll('.storage-content');
+  const isAnyHidden = Array.from(items).some(item => item.classList.contains('hidden'));
+  
+  items.forEach(item => {
+    item.classList.toggle('hidden', !isAnyHidden);
+  });
+  
+  // Update button icon
+  const svg = button.querySelector('svg');
+  svg.style.transform = isAnyHidden ? 'rotate(180deg)' : '';
+}
+
+function exportDomainData(button) {
+  const card = button.closest('.storage-card');
+  const domain = card.querySelector('h3').textContent.trim();
+  const items = {};
+  
+  card.querySelectorAll('.storage-item').forEach(item => {
+    const key = item.dataset.key;
+    const value = item.dataset.value;
+    items[key] = value;
+  });
+  
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${domain}-storage.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  // Show success notification
+  showNotification('Data exported successfully!', 'success');
+}
+
+function prettifyJSON(button, event) {
+  event.stopPropagation();
+  const item = button.closest('.storage-item');
+  const pre = item.querySelector('pre');
+  try {
+    const parsed = JSON.parse(pre.textContent);
+    pre.textContent = JSON.stringify(parsed, null, 2);
+    showNotification('JSON formatted successfully!', 'success');
+  } catch (e) {
+    showNotification('Invalid JSON content', 'error');
+  }
+}
+
+function decodeBase64(button, event) {
+  event.stopPropagation();
+  const item = button.closest('.storage-item');
+  const pre = item.querySelector('pre');
+  try {
+    const decoded = atob(pre.textContent);
+    pre.textContent = decoded;
+    showNotification('Base64 decoded successfully!', 'success');
+  } catch (e) {
+    showNotification('Invalid Base64 content', 'error');
+  }
+}
+
+function showNotification(message, type = 'success') {
+  const notification = document.createElement('div');
+  const bgColor = type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90';
+  notification.className = `fixed bottom-4 right-4 ${bgColor} backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300`;
+  notification.innerHTML = `
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === 'success' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12'}" />
+    </svg>
+    <span>${message}</span>
+  `;
+  
+  document.body.appendChild(notification);
+  setTimeout(() => notification.classList.remove('translate-y-20', 'opacity-0'), 100);
+  setTimeout(() => {
+    notification.classList.add('translate-y-20', 'opacity-0');
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
+}
+
+// Add this new function for domain toggling
+function toggleDomain(header) {
+  const card = header.closest('.storage-card');
+  const content = card.querySelector('.domain-content');
+  const arrow = header.querySelector('svg').parentElement;
+  
+  // Toggle content visibility
+  content.classList.toggle('hidden');
+  
+  // Rotate arrow
+  if (content.classList.contains('hidden')) {
+    arrow.style.transform = 'rotate(0deg)';
+    header.querySelector('.group-hover\\:opacity-100').textContent = 'Click to expand';
+  } else {
+    arrow.style.transform = 'rotate(180deg)';
+    header.querySelector('.group-hover\\:opacity-100').textContent = 'Click to collapse';
+  }
+  
+  // Add animation class
+  card.classList.add('transition-shadow');
+  if (!content.classList.contains('hidden')) {
+    card.classList.add('shadow-lg', 'shadow-purple-500/10');
+  } else {
+    card.classList.remove('shadow-lg', 'shadow-purple-500/10');
+  }
+}
+</script>
+{% endblock %} 

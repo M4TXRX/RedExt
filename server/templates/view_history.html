@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+
+{% block title %}Browsing History - {{ agent_id }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-[2000px] mx-auto space-y-6">
+  <!-- Header Section -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-red-500/10 p-6 shadow-lg shadow-red-500/5">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="bg-black/30 p-3 rounded-lg ring-1 ring-red-500/20">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-100">Browsing History Analysis</h1>
+          <p class="text-gray-400 text-sm mt-1">Agent: {{ agent_id }}</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('agent_data', agent_id=agent_id) }}" 
+           class="flex items-center gap-2 px-4 py-2 bg-gray-900/50 hover:bg-gray-900/80 rounded-lg transition-all text-gray-300 hover:text-gray-100">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-purple-500/10">
+      <div class="flex items-center gap-3">
+        <div class="bg-purple-500/10 p-2 rounded-lg">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-400">Total Entries</p>
+          <h3 class="text-xl font-bold text-gray-100">{{ stats.total_entries }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-blue-500/10">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-500/10 p-2 rounded-lg">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-400">Unique Domains</p>
+          <h3 class="text-xl font-bold text-gray-100">{{ stats.unique_domains }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-orange-500/10">
+      <div class="flex items-center gap-3">
+        <div class="bg-orange-500/10 p-2 rounded-lg">
+          <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-400">Frequent Sites</p>
+          <h3 class="text-xl font-bold text-gray-100">{{ stats.frequent_sites }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-green-500/10">
+      <div class="flex items-center gap-3">
+        <div class="bg-green-500/10 p-2 rounded-lg">
+          <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-400">Collection Period</p>
+          <h3 class="text-xl font-bold text-gray-100">{{ stats.collection_period }} days</h3>
+          <p class="text-xs text-gray-500 mt-1">
+            {{ stats.start_date|format_datetime }} - {{ stats.end_date|format_datetime }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-lg">
+    <div class="p-4 border-b border-gray-700/50">
+      <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex-1 relative">
+          <input type="text" 
+                 id="historySearch" 
+                 placeholder="Search history entries..." 
+                 class="w-full bg-black/30 text-gray-100 pl-10 pr-4 py-2 rounded-lg border border-gray-700/50 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="toggleFrequentSites()" 
+                  id="frequentFilter"
+                  class="px-4 py-2 rounded-lg bg-black/30 border border-gray-700/50 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all duration-300 flex items-center gap-2">
+            <span>🔥</span>
+            <span>Frequent</span>
+          </button>
+          <button onclick="toggleTypedURLs()" 
+                  id="typedFilter"
+                  class="px-4 py-2 rounded-lg bg-black/30 border border-gray-700/50 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all duration-300 flex items-center gap-2">
+            <span>⌨️</span>
+            <span>Typed</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Domains -->
+    <div class="p-4 border-b border-gray-700/50">
+      <h3 class="text-sm font-medium text-gray-400 mb-3">Quick Filters</h3>
+      <div id="topDomains" class="flex flex-wrap gap-2">
+        <!-- Filled by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline Chart -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-400">Activity Timeline</h3>
+      <div class="flex items-center gap-4">
+        <select id="timeRange" class="bg-black/30 text-sm text-gray-300 px-3 py-1.5 rounded-lg border border-gray-700/50">
+          <option value="7">Last 7 Days</option>
+          <option value="30">Last 30 Days</option>
+          <option value="90">Last 90 Days</option>
+          <option value="all">All Time</option>
+        </select>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+            Visit Count
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="relative h-[200px] w-full">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- History Entries -->
+  {% for record in records %}
+    {% set payload = record.payload %}
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-lg overflow-hidden">
+      <div class="p-4 border-b border-gray-700/50 bg-black/20">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-medium text-gray-200">
+              Collection #{{ loop.index }}
+            </h3>
+            <p class="text-sm text-gray-400 mt-1">{{ record.timestamp }}</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="text-sm px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/20">
+              {{ payload.entries|length }} Entries
+            </span>
+            <span class="text-sm px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/20">
+              {{ payload.days }} Days
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-700/50">
+          <thead class="bg-black/20">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Title</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">URL</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Visit Count</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Last Visit</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 relative group">
+                <span>Type</span>
+                <div class="hidden group-hover:block absolute z-10 bg-gray-800/95 text-xs p-2 rounded-md shadow-lg border border-gray-700/50 w-48 mt-1">
+                  <p class="mb-2">
+                    <span class="font-medium">⌨️ Typed:</span> URL was manually entered in address bar
+                  </p>
+                  <p>
+                    <span class="font-medium">🔥 Frequent:</span> Visited more than 5 times
+                  </p>
+                </div>
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700/50">
+            {% for entry in payload.entries %}
+              <tr class="history-row hover:bg-black/20 transition-all duration-300"
+                  data-visits="{{ entry.visitCount }}"
+                  data-typed="{{ entry.typedCount }}"
+                  data-domain="{{ entry.url|extract_domain }}"
+                  data-created="{{ entry.lastVisit }}">
+                <td class="px-4 py-3 text-sm text-gray-300">{{ entry.title }}</td>
+                <td class="px-4 py-3 text-sm text-gray-300">
+                  <div class="group relative">
+                    <div class="max-w-xs truncate hover:text-purple-400 transition-colors">
+                      {{ entry.url }}
+                    </div>
+                    <div class="hidden group-hover:block absolute top-0 left-0 mt-8 p-2 bg-gray-800 rounded-lg shadow-lg z-10 text-gray-300 text-xs">
+                      {{ entry.url }}
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-300">{{ entry.visitCount }}</td>
+                <td class="px-4 py-3 text-sm text-gray-300">{{ entry.lastVisit|format_datetime }}</td>
+                <td class="px-4 py-3 text-sm">
+                  <div class="flex gap-2">
+                    {% if entry.typedCount > 0 %}
+                      <span class="px-2 py-1 rounded-md text-xs bg-blue-500/20 text-blue-300 border border-blue-500/20 flex items-center gap-1" 
+                            title="URL typed {{ entry.typedCount }} times">
+                        <span>⌨️</span>
+                        <span>Manually Typed ({{ entry.typedCount }})</span>
+                      </span>
+                    {% endif %}
+                    {% if entry.visitCount > 5 %}
+                      <span class="px-2 py-1 rounded-md text-xs bg-orange-500/20 text-orange-300 border border-orange-500/20 flex items-center gap-1">
+                        <span>🔥</span>
+                        <span>Frequent Visit</span>
+                      </span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-sm">
+                  <button onclick="copyEntry('{{ entry|tojson }}')"
+                          class="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-purple-500/20 rounded-lg transition-all duration-300 text-xs border border-gray-600/50 hover:border-purple-500/50">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('historySearch');
+  let showFrequentOnly = false;
+  let showTypedOnly = false;
+  let timelineChart = null;
+  // Initialize data with error handling
+  let historyData;
+  try {
+    historyData = {{ history_data_json }};
+  } catch (e) {
+    console.error('Error parsing history data:', e);
+    historyData = [];
+  }
+  
+  function updateStats() {
+    try {
+      const visibleRows = Array.from(document.querySelectorAll('.history-row:not([style*="display: none"])'));
+      
+      // Calculate unique domains
+      const domains = new Set(visibleRows.map(row => row.dataset.domain));
+      document.getElementById('uniqueDomainsStats').textContent = domains.size;
+
+      // Update frequent sites count
+      const frequentSites = visibleRows.filter(row => parseInt(row.dataset.visits) > 5);
+      document.getElementById('frequentCount').textContent = frequentSites.length;
+
+      // Calculate time range using created_at from data
+      const dates = visibleRows
+        .map(row => new Date(row.dataset.created))
+        .sort((a, b) => a - b);
+      
+      if (dates.length > 0) {
+        const daysDiff = Math.ceil((dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24));
+        document.getElementById('timeRangeStats').textContent = `${daysDiff} days`;
+      }
+
+      // Update total count
+      document.getElementById('totalStats').textContent = visibleRows.length;
+
+      // Update filter buttons appearance
+      document.getElementById('frequentFilter').classList.toggle('bg-purple-500/20', showFrequentOnly);
+      document.getElementById('typedFilter').classList.toggle('bg-purple-500/20', showTypedOnly);
+    } catch (error) {
+      console.error('Error updating stats:', error);
+      document.querySelectorAll('[id$="Stats"]').forEach(el => {
+        el.textContent = 'Error';
+        el.classList.add('text-red-400');
+      });
+    }
+  }
+
+  function initializeTopDomains() {
+    const domainCounts = {};
+    document.querySelectorAll('.history-row').forEach(row => {
+      const domain = row.dataset.domain;
+      domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+    });
+
+    const topDomains = Object.entries(domainCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const container = document.getElementById('topDomains');
+    container.innerHTML = ''; // Clear existing tags
+
+    topDomains.forEach(([domain, count]) => {
+      const tag = document.createElement('button');
+      tag.className = 'px-3 py-1.5 rounded-lg bg-black/30 hover:bg-purple-500/20 transition-all duration-300 text-sm border border-gray-700/50 hover:border-purple-500/50';
+      tag.innerHTML = `
+        <span class="text-gray-300">${domain}</span>
+        <span class="ml-2 px-2 py-0.5 bg-purple-500/20 rounded-full text-xs text-purple-300">${count}</span>
+      `;
+      tag.onclick = () => {
+        searchInput.value = domain;
+        filterEntries();
+      };
+      container.appendChild(tag);
+    });
+  }
+
+  function processTimelineData(data, days = 30) {
+    const now = new Date();
+    const timeData = {};
+    
+    // Initialize dates
+    for (let i = 0; i < days; i++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      timeData[dateStr] = 0;
+    }
+
+    // Process visit counts
+    data.forEach(record => {
+      if (record.payload && record.payload.entries) {
+        record.payload.entries.forEach(entry => {
+          const visitDate = new Date(entry.lastVisit).toISOString().split('T')[0];
+          if (timeData.hasOwnProperty(visitDate)) {
+            timeData[visitDate] += entry.visitCount || 1;
+          }
+        });
+      }
+    });
+
+    return {
+      labels: Object.keys(timeData).reverse(),
+      values: Object.values(timeData).reverse()
+    };
+  }
+
+  function updateTimeline(days) {
+    const timelineData = processTimelineData(historyData, days);
+    const ctx = document.getElementById('timelineChart').getContext('2d');
+    
+    // Properly destroy existing chart
+    if (timelineChart instanceof Chart) {
+      timelineChart.destroy();
+    }
+
+    // Create new chart
+    timelineChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timelineData.labels,
+        datasets: [{
+          label: 'Visits',
+          data: timelineData.values,
+          borderColor: 'rgb(147, 51, 234)',
+          backgroundColor: 'rgba(147, 51, 234, 0.1)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: 'rgb(147, 51, 234)',
+            bodyColor: '#fff',
+            borderColor: 'rgba(147, 51, 234, 0.2)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.5)'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.5)',
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function initializeTooltips() {
+    document.querySelectorAll('.history-row td:nth-child(2)').forEach(cell => {
+      const url = cell.textContent.trim();
+      const isValidUrl = url.startsWith('http://') || url.startsWith('https://');
+      
+      cell.innerHTML = `
+        <div class="group relative">
+          <div class="max-w-xs truncate hover:text-purple-400 transition-colors cursor-pointer">
+            ${url}
+          </div>
+          <div class="hidden group-hover:block absolute left-0 mt-2 p-3 bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg z-10 w-max max-w-lg border border-purple-500/20">
+            <p class="text-xs text-gray-300 font-mono">${url}</p>
+            <div class="mt-2 pt-2 border-t border-gray-700/50 flex gap-2">
+              ${isValidUrl ? `
+                <button onclick="window.open('${url}', '_blank')" 
+                        class="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                  Open URL ↗
+                </button>
+              ` : `
+                <span class="text-xs text-red-400">Invalid URL</span>
+              `}
+              <button onclick="navigator.clipboard.writeText('${url}')"
+                      class="text-xs text-gray-400 hover:text-gray-300 transition-colors">
+                Copy URL
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function filterEntries() {
+    const searchTerm = searchInput.value.toLowerCase();
+    
+    document.querySelectorAll('.history-row').forEach(row => {
+      const title = row.querySelector('td:first-child').textContent.toLowerCase();
+      const url = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+      const domain = row.dataset.domain.toLowerCase();
+      const visits = parseInt(row.dataset.visits);
+      const typed = parseInt(row.dataset.typed);
+
+      const matchesSearch = searchTerm === '' || 
+                          title.includes(searchTerm) || 
+                          url.includes(searchTerm) || 
+                          domain.includes(searchTerm);
+      const matchesFrequent = !showFrequentOnly || visits > 5;
+      const matchesTyped = !showTypedOnly || typed > 0;
+
+      row.style.display = (matchesSearch && matchesFrequent && matchesTyped) ? '' : 'none';
+    });
+
+    updateStats();
+    updateTimeline(30); // Refresh timeline with filtered data
+  }
+
+  // Event Listeners
+  searchInput.addEventListener('input', filterEntries);
+
+  window.toggleFrequentSites = function() {
+    showFrequentOnly = !showFrequentOnly;
+    filterEntries();
+  };
+
+  window.toggleTypedURLs = function() {
+    showTypedOnly = !showTypedOnly;
+    filterEntries();
+  };
+
+  // Enhanced copy functionality
+  window.copyEntry = function(entryData) {
+    navigator.clipboard.writeText(entryData).then(() => {
+      const notification = document.createElement('div');
+      notification.className = 'fixed bottom-4 right-4 bg-gray-800/95 text-gray-100 px-4 py-3 rounded-lg shadow-lg border border-purple-500/20 backdrop-blur-sm flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300';
+      notification.innerHTML = `
+        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Entry copied to clipboard</span>
+      `;
+      document.body.appendChild(notification);
+      
+      // Animate in
+      setTimeout(() => {
+        notification.classList.remove('translate-y-20', 'opacity-0');
+      }, 100);
+
+      // Animate out
+      setTimeout(() => {
+        notification.classList.add('translate-y-20', 'opacity-0');
+        setTimeout(() => notification.remove(), 300);
+      }, 2000);
+    });
+  };
+
+  // Add keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Focus search with Ctrl + F or /
+    if ((e.ctrlKey && e.key === 'f') || (!e.ctrlKey && e.key === '/')) {
+      e.preventDefault();
+      searchInput.focus();
+    }
+    // Toggle frequent sites with Ctrl + Shift + F
+    else if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      toggleFrequentSites();
+    }
+    // Toggle typed URLs with Ctrl + Shift + T
+    else if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+      e.preventDefault();
+      toggleTypedURLs();
+    }
+    // Close tooltips with Escape
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.group-hover\\:block').forEach(tooltip => {
+        tooltip.classList.remove('group-hover:block');
+      });
+    }
+  });
+
+  // Add keyboard shortcuts help tooltip
+  const helpButton = document.createElement('button');
+  helpButton.className = 'p-2 text-gray-400 hover:text-gray-300 transition-colors';
+  helpButton.innerHTML = `
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  `;
+  helpButton.onclick = function() {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'fixed bottom-4 right-4 bg-gray-800/95 text-gray-100 px-4 py-3 rounded-lg shadow-lg border border-purple-500/20 backdrop-blur-sm flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300';
+    tooltip.innerHTML = `
+      <h4 class="text-sm font-medium text-gray-300 mb-2">Keyboard Shortcuts</h4>
+      <div class="space-y-2 text-xs text-gray-400">
+        <div class="flex justify-between">
+          <span>Search</span>
+          <span class="font-mono">Ctrl + F or /</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Toggle Frequent Sites</span>
+          <span class="font-mono">Ctrl + Shift + F</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Toggle Typed URLs</span>
+          <span class="font-mono">Ctrl + Shift + T</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Close Tooltips</span>
+          <span class="font-mono">Esc</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(tooltip);
+    
+    // Animate in
+    setTimeout(() => {
+      tooltip.classList.remove('translate-y-20', 'opacity-0');
+    }, 100);
+
+    // Animate out
+    setTimeout(() => {
+      tooltip.classList.add('translate-y-20', 'opacity-0');
+      setTimeout(() => tooltip.remove(), 300);
+    }, 2000);
+  };
+
+  const helpContainer = document.createElement('div');
+  helpContainer.className = 'relative group';
+  helpContainer.appendChild(helpButton);
+  searchInput.parentNode.insertBefore(helpContainer, searchInput.nextSibling);
+
+  // Handle time range changes
+  document.getElementById('timeRange').addEventListener('change', function(e) {
+    const days = e.target.value === 'all' ? 365 : parseInt(e.target.value);
+    updateTimeline(days);
+  });
+
+  // Initialize timeline with 30 days by default
+  updateTimeline(30);
+});
+</script>
+{% endblock %} 

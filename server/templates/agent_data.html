@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Agent Data - {{ agent.hostname or agent_id }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+  <!-- Header with Stats -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800/50 backdrop-blur-sm p-4 rounded-xl border border-gray-700/50">
+    <div class="animate-fade-in">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-gray-100">{{ agent.hostname or agent_id }}</h1>
+        <span class="px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2
+          {% set status = agent.last_seen|calculate_status %}
+          {% if status == 'online' %}
+            bg-green-900/50 text-green-400
+          {% elif status == 'idle' %}
+            bg-yellow-900/50 text-yellow-400
+          {% else %}
+            bg-red-900/50 text-red-400
+          {% endif %}">
+          <span class="w-2 h-2 rounded-full 
+            {% if status == 'online' %}bg-green-400
+            {% elif status == 'idle' %}bg-yellow-400
+            {% else %}bg-red-400{% endif %}"></span>
+          {{ status|title }}
+        </span>
+      </div>
+      <p class="text-gray-400 mt-2 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Last seen: {{ agent.last_seen|format_timestamp or "Never" }}
+      </p>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="flex flex-wrap items-center gap-3">
+      {% for data_type, records in data_by_type.items() %}
+        <div class="bg-gray-700/50 backdrop-blur-sm rounded-xl px-4 py-2 border border-gray-600/50 hover:border-purple-500/50 transition-all duration-300">
+          <span class="text-sm text-gray-400">{{ data_type|title }}</span>
+          <span class="text-lg font-bold text-gray-100 ml-2">{{ records|length }}</span>
+        </div>
+      {% endfor %}
+      <a href="{{ url_for('agents') }}" 
+         class="text-gray-400 hover:text-gray-300 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700/50 transition-all duration-300">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Agents
+      </a>
+    </div>
+  </div>
+
+  <!-- Search and Filter -->
+  <div class="flex flex-col md:flex-row gap-4">
+    <div class="flex-1">
+      <div class="relative group">
+        <input type="text" 
+               id="dataSearch" 
+               placeholder="Search data contents..."
+               class="w-full bg-gray-800/50 backdrop-blur-sm text-gray-100 pl-10 pr-4 py-2 rounded-xl border border-gray-700/50 group-hover:border-purple-500/50 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent focus:outline-none transition-all">
+        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+    <select id="typeFilter" 
+            class="bg-gray-800/50 backdrop-blur-sm text-gray-100 px-4 py-2 rounded-xl border border-gray-700/50 hover:border-purple-500/50 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all cursor-pointer">
+      <option value="all">All Types</option>
+      {% for data_type in data_by_type.keys() %}
+        <option value="{{ data_type }}">{{ data_type|title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Data Categories -->
+  <div class="grid grid-cols-1 gap-4" id="dataContainer">
+    {% for data_type, records in data_by_type.items() %}
+      <div class="data-section bg-gray-900/80 backdrop-blur-sm rounded-xl border border-red-500/10 overflow-hidden transition-all duration-300 hover:border-red-500/30 shadow-lg" 
+           data-type="{{ data_type }}">
+        <div class="p-4 bg-black/30 cursor-pointer hover:bg-black/40 transition-all duration-300" 
+             onclick="toggleSection('{{ data_type }}')">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-lg 
+                {% if data_type == 'take_screenshot' %}bg-purple-500/20 text-purple-400
+                {% elif data_type == 'domsnapshot' %}bg-blue-500/20 text-blue-400
+                {% elif data_type == 'clipboardcapture' %}bg-green-500/20 text-green-400
+                {% elif data_type == 'cookies' %}bg-red-500/20 text-red-400
+                {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                <!-- Type-specific icons -->
+                {% if data_type == 'take_screenshot' %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                {% elif data_type == 'clipboardcapture' %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                {% else %}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                {% endif %}
+              </div>
+              <h2 class="text-xl font-bold text-gray-100">{{ data_type|title }}</h2>
+              <span class="px-3 py-1 rounded-full text-sm bg-black/50 text-gray-300 font-medium border border-gray-700">{{ records|length }} items</span>
+            </div>
+            <svg class="w-6 h-6 transform transition-transform duration-300" id="{{ data_type }}_icon" 
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        
+        <div id="{{ data_type }}_content" class="hidden divide-y divide-gray-800/50">
+          {% for record in records %}
+            <div class="data-item p-4 hover:bg-black/20 transition-all duration-300">
+              {% set payload = record.payload|from_json %}
+              
+              <!-- Type-specific data presentation -->
+              {% if data_type == 'take_screenshot' and payload.screenshot %}
+                <div class="group relative">
+                  <img src="data:image/png;base64,{{ payload.screenshot|safe }}" 
+                       alt="Screenshot" 
+                       class="w-full h-auto rounded-lg cursor-zoom-in hover:ring-2 hover:ring-purple-500/50 transition-all"
+                       onclick="openModal('modal-{{ loop.index }}')">
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+                </div>
+              {% elif data_type == 'clipboardcapture' and payload %}
+                <pre class="text-sm text-gray-300 bg-black/30 p-4 rounded-lg font-mono border border-gray-800">{{ payload.clipboardData or payload.error }}</pre>
+              {% elif data_type == 'domsnapshot' and payload %}
+                <div class="max-h-96 overflow-auto custom-scrollbar">
+                  <pre class="text-sm text-gray-300 bg-black/30 p-4 rounded-lg font-mono border border-gray-800">{{ payload.snapshot[:500] }}...</pre>
+                </div>
+              {% elif data_type == 'history' and payload %}
+                <div class="space-y-4">
+                  <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-200">
+                      <span class="text-purple-400">Collection Period:</span> {{ payload.days }} days
+                    </h3>
+                    <span class="text-sm px-3 py-1 rounded-full bg-purple-900">
+                      Entries: {{ payload.entries|length }}
+                    </span>
+                  </div>
+                  
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-700">
+                      <thead class="bg-gray-900">
+                        <tr>
+                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Title</th>
+                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">URL</th>
+                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Visit Count</th>
+                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-400">Last Visit</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-700">
+                        {% for entry in payload.entries[:5] %}
+                          <tr class="hover:bg-gray-750 transition-colors">
+                            <td class="px-4 py-3 text-sm text-gray-300">{{ entry.title }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-300">
+                              <div class="max-w-xs truncate">{{ entry.url }}</div>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-300">{{ entry.visitCount }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-300">{{ entry.lastVisit }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {% if payload.entries|length > 5 %}
+                    <div class="text-center">
+                      <a href="{{ url_for('view_data_type', agent_id=agent_id, data_type='HISTORY') }}" 
+                         class="text-purple-400 hover:text-purple-300 text-sm">
+                        View all {{ payload.entries|length }} entries →
+                      </a>
+                    </div>
+                  {% endif %}
+                </div>
+              {% else %}
+                <pre class="text-sm text-gray-300 bg-black/30 p-4 rounded-lg font-mono overflow-auto custom-scrollbar border border-gray-800">{{ record.payload }}</pre>
+              {% endif %}
+
+              <!-- Metadata footer -->
+              <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
+                <div class="flex items-center gap-4">
+                  <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ record.timestamp|format_timestamp }}
+                  </span>
+                  {% if payload.location %}
+                    <span class="flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      {{ payload.location }}
+                    </span>
+                  {% endif %}
+                </div>
+                <button onclick="copyData(`{{ payload|tojson|safe }}`)"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Copy
+                </button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="text-center py-12 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50">
+        <svg class="w-16 h-16 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+        <p class="text-lg font-semibold text-gray-300 mt-4">No data collected yet</p>
+        <p class="text-sm text-gray-400 mt-2">Waiting for agent to report data...</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const dataSearch = document.getElementById('dataSearch');
+  const typeFilter = document.getElementById('typeFilter');
+  const dataItems = document.querySelectorAll('.data-item');
+  const dataSections = document.querySelectorAll('.data-section');
+
+  function filterData() {
+    const searchTerm = dataSearch.value.toLowerCase();
+    const selectedType = typeFilter.value;
+
+    dataSections.forEach(section => {
+      const sectionType = section.dataset.type;
+      const items = section.querySelectorAll('.data-item');
+      let visibleItems = 0;
+
+      if (selectedType === 'all' || selectedType === sectionType) {
+        items.forEach(item => {
+          const content = item.textContent.toLowerCase();
+          const matches = content.includes(searchTerm);
+          item.style.display = matches ? 'block' : 'none';
+          if (matches) {
+            visibleItems++;
+            item.classList.add('animate-fade-in');
+          }
+        });
+      }
+
+      section.style.display = visibleItems > 0 ? 'block' : 'none';
+      if (visibleItems > 0) {
+        section.classList.add('animate-fade-in');
+      }
+    });
+  }
+
+  function toggleSection(dataType) {
+    const content = document.getElementById(`${dataType}_content`);
+    const icon = document.getElementById(`${dataType}_icon`);
+    const isHidden = content.classList.contains('hidden');
+    
+    if (isHidden) {
+      content.classList.remove('hidden');
+      content.classList.add('animate-fade-in');
+      icon.style.transform = 'rotate(180deg)';
+    } else {
+      content.classList.add('hidden');
+      icon.style.transform = '';
+    }
+  }
+
+  dataSearch.addEventListener('input', filterData);
+  typeFilter.addEventListener('change', filterData);
+  
+  window.toggleSection = toggleSection;
+});
+</script>
+
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107, 114, 128, 0.5) rgba(31, 41, 55, 0.5);
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.5);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.7);
+}
+</style>
+{% endblock %} 

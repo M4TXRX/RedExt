@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Browser Bookmarks - {{ agent_id }}{% endblock %}
+
+{% block content %}
+<!-- Main container with fixed width and overflow protection -->
+<div class="h-screen flex flex-col bg-gradient-to-b from-black/40 via-black/20 to-transparent">
+  <!-- Header Section -->
+  <div class="p-4 lg:p-6">
+    <div class="bg-black/40 backdrop-blur-sm rounded-xl border border-red-500/10 p-4 sm:p-6 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <!-- Operation Info -->
+        <div class="flex flex-col sm:flex-row items-start gap-4 min-w-0">
+          <div class="bg-red-500/10 p-3 rounded-lg ring-1 ring-red-500/20 shrink-0">
+            <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+          </div>
+          <div class="space-y-2 min-w-0">
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl font-bold text-gray-100">Browser Intel</h1>
+              <span class="px-2 py-1 rounded-md bg-red-500/20 text-red-400 text-xs font-medium">EXFIL</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-400 truncate">
+              <span>Target ID:</span>
+              <code class="text-red-400 font-mono bg-red-500/10 px-2 py-0.5 rounded truncate">{{ agent_id }}</code>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="flex items-center gap-3">
+          <button onclick="document.getElementById('bookmarkSearch').focus()"
+                  class="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg text-purple-400 hover:text-purple-300 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Quick Search
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="flex-1 overflow-hidden p-4 lg:p-6">
+    <!-- Search Bar -->
+    <div class="sticky top-0 z-10 mb-4">
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl border border-red-500/10 p-4">
+        <div class="relative">
+          <input type="text" 
+                 id="bookmarkSearch" 
+                 placeholder="Search bookmarks by title or URL..." 
+                 class="w-full bg-black/50 text-gray-100 pl-10 pr-4 py-2 rounded-lg border border-red-500/20 focus:outline-none focus:border-red-500/50">
+          <svg class="w-5 h-5 text-red-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bookmarks List -->
+    <div class="bg-black/40 backdrop-blur-sm rounded-xl border border-red-500/10 overflow-hidden">
+      <div id="bookmarksTree" class="h-full overflow-y-auto custom-scrollbar p-4">
+        <!-- Content populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Modern Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 3px;
+}
+
+/* Bookmark Item Styles */
+.bookmark-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  max-width: 100%;
+}
+
+.bookmark-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.url-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.folder-item {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 37%, rgba(255,255,255,0.03) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('bookmarkSearch');
+  const treeContainer = document.getElementById('bookmarksTree');
+
+  function renderBookmarkItem(bookmark) {
+    if (!bookmark?.url) return '';
+    
+    const safeUrl = bookmark.url.replace(/['"<>]/g, '');
+    const safeTitle = (bookmark.title || new URL(safeUrl).hostname || 'Untitled')
+      .replace(/['"<>]/g, '');
+    
+    return `
+      <div class="bookmark-item p-3 hover:bg-red-500/5 rounded-lg transition-all border border-transparent hover:border-red-500/20 group">
+        <div class="bookmark-content">
+          <div class="text-gray-200 font-medium mb-1 truncate group-hover:text-red-300 transition-colors">
+            ${safeTitle}
+          </div>
+          <div class="url-text text-gray-500 text-sm" title="${safeUrl}">
+            ${safeUrl}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+          <button onclick="copyToClipboard('${safeUrl}')"
+                  class="tooltip text-purple-400 hover:text-purple-300 p-2 rounded-lg hover:bg-purple-500/10 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+            </svg>
+            <span class="tooltiptext">Copy URL</span>
+          </button>
+          <a href="${safeUrl}" 
+             target="_blank" 
+             rel="noopener noreferrer"
+             class="tooltip text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            <span class="tooltiptext">Open URL</span>
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFolder(folder) {
+    if (!folder) return '';
+    
+    const items = (folder.children || []).map(child => {
+      if (child.children) {
+        return renderFolder(child);
+      }
+      return renderBookmarkItem(child);
+    }).join('');
+    
+    return `
+      <div class="folder-item space-y-2 w-full">
+        <div class="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-500/10 to-transparent rounded-lg border border-blue-500/20 group hover:border-blue-500/30 transition-all">
+          <svg class="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <span class="text-gray-300 font-medium group-hover:text-blue-300 transition-colors truncate">
+            ${folder.title || 'Untitled Folder'}
+          </span>
+        </div>
+        <div class="pl-6 space-y-2">
+          ${items}
+        </div>
+      </div>
+    `;
+  }
+
+  // Initialize bookmarks
+  let bookmarksData = ({{ records|map(attribute='payload')|list|tojson|safe }});
+  if (!bookmarksData) bookmarksData = [];
+  
+  if (treeContainer && bookmarksData.length > 0) {
+    bookmarksData.forEach(data => {
+      try {
+        if (data?.bookmarks) {
+          treeContainer.innerHTML += renderFolder(data.bookmarks);
+        }
+      } catch (e) {
+        console.error('Error rendering bookmarks:', e);
+        treeContainer.innerHTML += `
+          <div class="text-red-400 p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <span>Error rendering bookmarks data</span>
+            </div>
+          </div>
+        `;
+      }
+    });
+  } else if (treeContainer) {
+    treeContainer.innerHTML = `
+      <div class="text-gray-400 text-center py-8">
+        <svg class="w-12 h-12 mx-auto text-red-500/40 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+        </svg>
+        <p>No bookmark data available</p>
+        <p class="text-sm text-gray-500 mt-2">Execute a bookmark exfiltration command to collect data</p>
+      </div>
+    `;
+  }
+
+  // Add resize observer
+  const resizeObserver = new ResizeObserver(entries => {
+    for (let entry of entries) {
+      const container = entry.target;
+      const content = container.querySelector('.custom-scrollbar');
+      if (content) {
+        content.style.maxHeight = `${window.innerHeight - content.offsetTop - 32}px`;
+      }
+    }
+  });
+
+  // Observe the main container
+  const mainContainer = document.querySelector('.overflow-hidden');
+  if (mainContainer) {
+    resizeObserver.observe(mainContainer);
+    mainContainer.classList.add('max-w-full');
+  }
+
+  // Update the bookmarks tree container styles
+  if (treeContainer) {
+    treeContainer.classList.add('max-w-full', 'overflow-x-hidden');
+  }
+
+  // Search functionality
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      document.querySelectorAll('.bookmark-item').forEach(item => {
+        const title = item.querySelector('.text-gray-200')?.textContent.toLowerCase() || '';
+        const url = item.querySelector('.url-container')?.textContent.toLowerCase() || '';
+        
+        const isVisible = title.includes(searchTerm) || url.includes(searchTerm);
+        item.style.display = isVisible ? '' : 'none';
+        
+        // Show/hide parent folders
+        let parent = item.parentElement;
+        while (parent && parent.classList.contains('folder-item')) {
+          if (isVisible) parent.style.display = '';
+          parent = parent.parentElement?.closest('.folder-item');
+        }
+      });
+    });
+  }
+
+  // Add hover tooltip for truncated URLs
+  document.addEventListener('mouseover', (e) => {
+    const urlElement = e.target.closest('.url-text');
+    if (urlElement && urlElement.scrollWidth > urlElement.clientWidth) {
+      urlElement.title = urlElement.textContent;
+    }
+  });
+});
+</script>
+{% endblock %} 

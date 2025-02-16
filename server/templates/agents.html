@@ -1,0 +1,257 @@
+<!-- templates/agents.html -->
+
+{% extends "base.html" %}
+{% block title %}Agent Dashboard{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+  <!-- Header with Stats -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="animate-fade-in">
+      <h1 class="text-3xl font-bold text-gray-100 flex items-center gap-3">
+        <span>Agent Dashboard</span>
+        <span class="px-2 py-1 text-sm bg-purple-900/30 text-purple-400 rounded-full">{{ agents|length }} Total</span>
+      </h1>
+      <p class="text-gray-400 mt-1">Monitor and manage connected agents</p>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="stats-grid grid grid-cols-2 gap-3">
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-green-900/30 rounded-lg">
+              <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
+              </svg>
+            </div>
+            <div>
+              <span class="text-sm text-gray-400">Active Now</span>
+              <div class="flex items-center gap-2">
+                {% set active = agents|selectattr('last_seen|calculate_status', 'equalto', 'online')|list|length %}
+                <span class="text-2xl font-bold text-gray-100">{{ active }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-900/30 rounded-lg">
+              <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <span class="text-sm text-gray-400">Idle</span>
+              <div class="flex items-center gap-2">
+                {% set idle = agents|selectattr('last_seen|calculate_status', 'equalto', 'idle')|list|length %}
+                <span class="text-2xl font-bold text-gray-100">{{ idle }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Refresh Button -->
+      <button onclick="refreshAgents(this)" 
+              class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:translate-y-[-2px] border border-gray-700 hover:border-purple-500/50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="bg-gray-800/50 backdrop-blur-sm p-4 rounded-xl border border-gray-700/50">
+    <div class="flex flex-col md:flex-row gap-4">
+      <div class="flex-1">
+        <div class="relative group">
+          <input type="text" 
+                 id="agentSearch" 
+                 placeholder="Search by hostname or ID..."
+                 class="w-full bg-gray-700/50 text-gray-100 pl-10 pr-4 py-2 rounded-lg border border-gray-600 group-hover:border-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:border-transparent focus:outline-none transition-all">
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+      <select id="statusFilter" 
+              class="bg-gray-700/50 text-gray-100 px-4 py-2 rounded-lg border border-gray-600 hover:border-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all cursor-pointer">
+        <option value="all">All Status</option>
+        <option value="online">🟢 Active</option>
+        <option value="idle">🟡 Idle</option>
+        <option value="offline">🔴 Offline</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Agents Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="agentsGrid">
+    {% for agent in agents %}
+    <div class="agent-card bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden hover:ring-2 hover:ring-purple-500/50 transition-all duration-300 border border-gray-700/50 hover:border-purple-500/30"
+         data-hostname="{{ agent.hostname|lower }}"
+         data-id="{{ agent.agent_id|lower }}"
+         data-status="{{ agent.last_seen|calculate_status }}">
+      <div class="p-4 space-y-4">
+        <!-- Header -->
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              {{ agent.hostname or "Unknown Host" }}
+            </h3>
+            <p class="text-sm text-gray-400 font-mono mt-1">{{ agent.agent_id }}</p>
+          </div>
+          <span class="px-2 py-1 rounded-full text-xs font-medium
+            {% set status = agent.last_seen|calculate_status %}
+            {% if status == 'online' %}
+              bg-green-900/50 text-green-400
+            {% elif status == 'idle' %}
+              bg-yellow-900/50 text-yellow-400
+            {% else %}
+              bg-red-900/50 text-red-400
+            {% endif %}">
+            {{ status|title }}
+          </span>
+        </div>
+        
+        <!-- Details -->
+        <div class="text-sm text-gray-400 space-y-2">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Last seen: {{ agent.last_seen|default("Never", true)|format_timestamp }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Tasks completed: {{ agent.completed_tasks|default(0) }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="bg-gray-700/30 p-4 flex justify-end gap-3">
+        <a href="{{ url_for('agent_data', agent_id=agent.agent_id) }}" 
+           class="text-sm bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:translate-y-[-2px]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>View Data</span>
+        </a>
+        <a href="{{ url_for('agent_detail', agent_id=agent.agent_id) }}" 
+           class="text-sm bg-gray-600/80 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:translate-y-[-2px]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Details</span>
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-span-full bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
+      <div class="text-gray-400 max-w-md mx-auto">
+        <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-lg font-medium">No agents connected yet</p>
+        <p class="text-sm mt-2">Waiting for agents to register with the C2 server...</p>
+        <button onclick="location.reload()" 
+                class="mt-4 text-purple-400 hover:text-purple-300 flex items-center gap-2 mx-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Check Again</span>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('agentSearch');
+  const statusFilter = document.getElementById('statusFilter');
+  const agentCards = document.querySelectorAll('.agent-card');
+
+  function filterAgents() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const statusValue = statusFilter.value;
+
+    agentCards.forEach(card => {
+      const hostname = card.dataset.hostname;
+      const id = card.dataset.id;
+      const status = card.dataset.status;
+      
+      const matchesSearch = hostname.includes(searchTerm) || id.includes(searchTerm);
+      const matchesStatus = statusValue === 'all' || status === statusValue;
+      
+      card.style.display = matchesSearch && matchesStatus ? 'block' : 'none';
+      if (matchesSearch && matchesStatus) {
+        card.classList.add('animate-fade-in');
+      }
+    });
+  }
+
+  searchInput.addEventListener('input', filterAgents);
+  statusFilter.addEventListener('change', filterAgents);
+
+  window.refreshAgents = function(button) {
+    button.classList.add('animate-spin');
+    
+    fetch(window.location.href)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.text();
+      })
+      .then(html => {
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        const newAgents = newDoc.querySelector('#agentsGrid');
+        if (newAgents) {
+          document.querySelector('#agentsGrid').innerHTML = newAgents.innerHTML;
+          filterAgents();
+        }
+      })
+      .catch(error => {
+        console.error('Error refreshing agents:', error);
+        button.classList.add('bg-red-600', 'hover:bg-red-700');
+        setTimeout(() => {
+          button.classList.remove('bg-red-600', 'hover:bg-red-700');
+        }, 2000);
+      })
+      .finally(() => {
+        button.classList.remove('animate-spin');
+      });
+  };
+
+  // Auto-refresh every 30 seconds
+  setInterval(() => refreshAgents(document.querySelector('button[onclick="refreshAgents(this)"]')), 30000);
+});
+</script>
+
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+</style>
+{% endblock %}

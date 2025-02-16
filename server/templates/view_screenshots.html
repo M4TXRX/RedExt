@@ -1,0 +1,194 @@
+{% extends "data_type_base.html" %}
+
+{% block type_specific_content %}
+<div class="space-y-6">
+  <!-- Control Panel -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/10 p-4 shadow-lg shadow-purple-500/5">
+    <div class="flex flex-wrap gap-4 items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <input type="text" 
+                 id="searchInput" 
+                 placeholder="Search by URL..." 
+                 class="bg-black/30 text-gray-100 pl-10 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-gray-700/50">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <select id="sortOrder" 
+                class="bg-black/30 text-gray-100 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-gray-700/50">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+      </div>
+      <div class="text-sm text-gray-400" id="screenshotCount">
+        {{ records|length }} screenshots captured
+      </div>
+    </div>
+  </div>
+
+  <!-- Screenshot Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="screenshotGrid">
+    {% for record in records %}
+      {% set payload = record.payload|from_json %}
+      <div class="screenshot-card group" data-url="{{ payload.location }}" data-timestamp="{{ record.timestamp }}">
+        <div class="bg-gray-800/80 rounded-xl overflow-hidden border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300">
+          <div class="relative aspect-video group cursor-zoom-in" onclick="openModal('modal-{{ loop.index }}')">
+            <img class="w-full h-full object-cover" 
+                 src="data:image/png;base64,{{ payload.screenshot|safe }}"
+                 alt="Screenshot">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+          </div>
+          <div class="p-4 space-y-3 border-t border-gray-700/50">
+            <div class="text-xs text-gray-300 break-all" title="{{ payload.location }}">
+              <span class="text-purple-400">URL:</span> {{ payload.location }}
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-400">
+                <span class="text-purple-400">Date taken:</span> {{ record.timestamp|format_timestamp }}
+              </span>
+              <button onclick="copyUrl(`{{ payload.location }}`)"
+                      class="text-xs px-3 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg transition-colors flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Copy URL
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div id="modal-{{ loop.index }}" class="fixed inset-0 bg-black/90 hidden z-50" onclick="closeModal('modal-{{ loop.index }}')">
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <div class="relative max-w-5xl w-full bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/10 overflow-hidden" 
+               onclick="event.stopPropagation()">
+            <div class="relative">
+              <img class="w-full h-auto cursor-zoom-out" 
+                   src="data:image/png;base64,{{ payload.screenshot|safe }}"
+                   alt="Screenshot Full"
+                   onclick="closeModal('modal-{{ loop.index }}')">
+              <div class="absolute top-4 right-4 flex gap-2">
+                <button onclick="closeModal('modal-{{ loop.index }}')"
+                        class="p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-all">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="p-4 bg-black/30">
+              <p class="text-sm text-gray-300 break-all">{{ payload.location }}</p>
+              <p class="text-xs text-gray-400 mt-2">Captured: {{ record.timestamp|format_timestamp }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchInput');
+  const sortSelect = document.getElementById('sortOrder');
+  const grid = document.getElementById('screenshotGrid');
+
+  function filterAndSortScreenshots() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const sortOrder = sortSelect.value;
+    const cards = Array.from(document.querySelectorAll('.screenshot-card'));
+    
+    cards.forEach(card => {
+      const url = card.dataset.url.toLowerCase();
+      card.style.display = url.includes(searchTerm) ? '' : 'none';
+    });
+
+    const visibleCards = cards.filter(card => card.style.display !== 'none');
+    visibleCards.sort((a, b) => {
+      const timeA = new Date(a.dataset.timestamp);
+      const timeB = new Date(b.dataset.timestamp);
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+
+    visibleCards.forEach(card => grid.appendChild(card));
+    document.getElementById('screenshotCount').textContent = 
+      `${visibleCards.length} screenshot${visibleCards.length !== 1 ? 's' : ''} found`;
+  }
+
+  searchInput.addEventListener('input', filterAndSortScreenshots);
+  sortSelect.addEventListener('change', filterAndSortScreenshots);
+
+  // Define copyUrl in global scope
+  window.copyUrl = async function(url) {
+    try {
+      // Try using the newer clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback to older method
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      // Show success toast
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-purple-500/90 text-white px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm z-50 flex items-center gap-2 transform translate-y-0 opacity-100 transition-all duration-300';
+      toast.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        URL copied to clipboard
+      `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate-y-2';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+      alert('Failed to copy URL to clipboard');
+    }
+  };
+
+  function downloadScreenshot(index) {
+    const img = document.querySelector(`#modal-${index} img`);
+    const link = document.createElement('a');
+    link.href = img.src;
+    link.download = `screenshot-${index}.png`;
+    link.click();
+  }
+
+  window.downloadScreenshot = downloadScreenshot;
+});
+
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('[id^="modal-"]').forEach(modal => {
+      modal.classList.add('hidden');
+    });
+    document.body.style.overflow = 'auto';
+  }
+});
+</script>
+{% endblock %} 

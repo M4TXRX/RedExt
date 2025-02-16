@@ -1,0 +1,502 @@
+<!-- templates/tasks.html -->
+
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+  <!-- Header with Stats -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-100 flex items-center gap-3">
+        <svg class="w-8 h-8 text-red-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        Task Management
+      </h1>
+      <p class="text-gray-400 mt-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-500/50 animate-subtle-pulse"></span>
+        Active Operations Center
+      </p>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex gap-4">
+        <div class="bg-gray-800/80 backdrop-blur-sm rounded-lg px-6 py-3 border border-gray-700/50">
+          <div class="flex items-center gap-3">
+            <div class="bg-blue-500/10 p-2 rounded-lg">
+              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <span class="text-sm text-gray-400">Active Tasks</span>
+              <div class="flex items-center gap-2">
+                <span class="text-2xl font-bold text-gray-100">
+                  {{ tasks|selectattr('status', 'in', ['pending', 'in_progress'])|list|length }}
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">Running</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/80 backdrop-blur-sm rounded-lg px-6 py-3 border border-gray-700/50">
+          <div class="flex items-center gap-3">
+            <div class="bg-green-500/10 p-2 rounded-lg">
+              <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <span class="text-sm text-gray-400">Success Rate</span>
+              <div class="flex items-center gap-2">
+                {% set completed = tasks|selectattr('status', 'equalto', 'completed')|list|length %}
+                {% set total = tasks|length %}
+                {% if total > 0 %}
+                  {% set rate = (completed / total * 100)|round|int %}
+                {% else %}
+                  {% set rate = 0 %}
+                {% endif %}
+                <span class="text-2xl font-bold text-gray-100">{{ rate }}%</span>
+                <span class="text-xs px-2 py-1 rounded-full 
+                  {% if rate >= 90 %}bg-green-500/10 text-green-400
+                  {% elif rate >= 70 %}bg-yellow-500/10 text-yellow-400
+                  {% else %}bg-red-500/10 text-red-400{% endif %}">
+                  {{ completed }}/{{ total }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-800/50 p-4 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+    <div class="relative flex-1">
+      <input type="text" 
+             id="taskSearch" 
+             placeholder="Search tasks by description or command..."
+             class="w-full bg-gray-900/50 text-gray-100 pl-10 pr-4 py-2.5 rounded-lg border border-gray-700/50 focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:outline-none placeholder-gray-500">
+      <svg class="w-5 h-5 text-gray-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </div>
+
+    <div class="flex gap-4 items-center">
+      <select id="statusFilter" 
+              class="bg-gray-900/50 text-gray-100 px-4 py-2.5 rounded-lg border border-gray-700/50 focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:outline-none">
+        <option value="all">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
+      </select>
+
+      <select id="sortFilter" 
+              class="bg-gray-900/50 text-gray-100 px-4 py-2.5 rounded-lg border border-gray-700/50 focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:outline-none">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+        <option value="status">By Status</option>
+      </select>
+
+      <div class="flex gap-2">
+        <a href="{{ url_for('create_task') }}" 
+           class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all duration-200 border border-red-500/20 hover:border-red-500/30">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>New Task</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Active Tasks Panel -->
+    <div class="bg-gray-800/50 rounded-xl border border-gray-700/50 backdrop-blur-sm overflow-hidden">
+      <div class="p-4 bg-gray-900/50 border-b border-gray-700/50 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-blue-500/10 p-2 rounded-lg">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-100">Active Tasks</h2>
+            <p class="text-sm text-gray-400">Currently running operations</p>
+          </div>
+        </div>
+      </div>
+      <div id="active_content" class="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+        {% for task in tasks %}
+          {% if task.status in ['pending', 'in_progress'] %}
+            <div class="task-card bg-gray-700/50 p-4 rounded-lg border border-gray-600/50 hover:border-purple-500/50 transition-all duration-200"
+                 data-status="{{ task.status }}"
+                 data-created="{{ task.created_at }}">
+              <div class="flex justify-between items-start">
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <input type="checkbox" 
+                           class="task-checkbox w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                           data-task-id="{{ task.task_id }}">
+                    <h3 class="font-medium text-gray-100">{{ task.description }}</h3>
+                    {% if task.status == 'pending' %}
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-900/50 text-yellow-400">
+                        Pending
+                      </span>
+                    {% elif task.status == 'in_progress' %}
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-900/50 text-blue-400">
+                        In Progress
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-sm text-gray-400 flex items-center space-x-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>{{ task.command }}</span>
+                    </p>
+                    {% if task.parameters %}
+                      <div class="relative group">
+                        <p class="text-sm text-gray-400 flex items-center space-x-2 cursor-pointer"
+                           onclick="toggleParameters('{{ task.task_id }}')">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          </svg>
+                          <span>Parameters</span>
+                          <span class="text-xs text-gray-500">(click to view)</span>
+                        </p>
+                        <div id="params_{{ task.task_id }}" 
+                             class="hidden absolute z-10 mt-2 p-3 bg-gray-900 rounded-lg border border-gray-700 shadow-lg">
+                          <pre class="text-xs text-gray-300">{{ task.parameters }}</pre>
+                        </div>
+                      </div>
+                    {% endif %}
+                    <p class="text-xs text-gray-500">Created: {{ task.created_at|format_timestamp }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button onclick="viewTaskDetails('{{ task.task_id }}')"
+                          class="p-2 hover:bg-gray-600/50 rounded-lg transition-colors group" 
+                          title="View Details">
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                  <button onclick="deleteTask('{{ task.task_id }}')"
+                          class="ml-2 p-1 hover:bg-red-600/20 rounded-lg transition-colors"
+                          title="Delete Task">
+                    <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Completed Tasks Panel -->
+    <div class="bg-gray-800/50 rounded-xl border border-gray-700/50 backdrop-blur-sm overflow-hidden">
+      <div class="p-4 bg-gray-900/50 border-b border-gray-700/50 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-green-500/10 p-2 rounded-lg">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-100">Completed / Failed Tasks</h2>
+            <p class="text-sm text-gray-400">Completed and failed operations</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+        {% for task in tasks %}
+          {% if task.status in ['completed', 'failed'] %}
+            <div class="task-card bg-gray-700/50 p-4 rounded-lg border border-gray-600/50 hover:border-purple-500/50 transition-all duration-200">
+              <div class="flex justify-between items-start">
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <h3 class="font-medium text-gray-100">{{ task.description }}</h3>
+                    {% if task.status == 'completed' %}
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-400">
+                        Completed
+                      </span>
+                    {% elif task.status == 'failed' %}
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-400">
+                        Failed
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-sm text-gray-400 flex items-center space-x-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>{{ task.command }}</span>
+                    </p>
+                    {% if task.parameters %}
+                      <p class="text-sm text-gray-400 flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        <span>{{ task.parameters }}</span>
+                      </p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500">Completed: {{ task.completed_at|format_timestamp }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button class="p-2 hover:bg-gray-600/50 rounded-lg transition-colors" title="View Details">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="text-center py-8">
+            <svg class="w-12 h-12 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p class="mt-2 text-gray-400">No completed tasks</p>
+            <p class="text-sm text-gray-500">Completed tasks will appear here</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Details Modal -->
+<div id="taskDetailsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50">
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-gray-800/90 rounded-xl border border-gray-700/50 backdrop-blur-sm max-w-2xl w-full max-h-[80vh] overflow-hidden">
+      <div class="p-4 border-b border-gray-700/50 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-100">Task Details</h3>
+        <button onclick="closeTaskDetails()" class="text-gray-400 hover:text-gray-300">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="taskDetailsContent" class="p-4 overflow-y-auto">
+        <!-- Content will be dynamically populated -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add this in the head section or right before the closing </body> tag -->
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/dark.css"/>
+
+<!-- Update the JavaScript section -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('taskSearch');
+  const statusFilter = document.getElementById('statusFilter');
+  const sortFilter = document.getElementById('sortFilter');
+  const taskCards = document.querySelectorAll('.task-card');
+
+  // Define the functions in the global scope
+  window.deleteTask = async function(taskId) {
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
+    
+    try {
+      const response = await fetch(`/api/tasks/delete/${taskId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        location.reload();
+      } else {
+        throw new Error('Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Failed to delete task');
+    }
+  }
+
+  window.bulkAction = async function(action) {
+    const selectedTasks = Array.from(document.querySelectorAll('.task-checkbox:checked'))
+      .map(checkbox => checkbox.dataset.taskId);
+    
+    if (selectedTasks.length === 0) {
+      alert('Please select at least one task');
+      return;
+    }
+    
+    const actionText = action === 'cancel' ? 'cancel' : 'delete';
+    if (!confirm(`Are you sure you want to ${actionText} ${selectedTasks.length} tasks?`)) return;
+    
+    try {
+      const response = await fetch('/api/tasks/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action,
+          taskIds: selectedTasks
+        })
+      });
+      
+      if (response.ok) {
+        location.reload();
+      } else {
+        throw new Error(`Failed to ${actionText} tasks`);
+      }
+    } catch (error) {
+      console.error(`Error performing bulk ${actionText}:`, error);
+      alert(`Failed to ${actionText} tasks`);
+    }
+  }
+
+  function filterAndSortTasks() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const statusValue = statusFilter.value;
+    const sortValue = sortFilter.value;
+
+    const cards = Array.from(taskCards);
+    
+    // Filter tasks
+    cards.forEach(card => {
+      const description = card.querySelector('h3').textContent.toLowerCase();
+      const command = card.querySelector('.text-gray-400').textContent.toLowerCase();
+      const status = card.querySelector('.rounded-full').textContent.trim().toLowerCase();
+      
+      const matchesSearch = description.includes(searchTerm) || command.includes(searchTerm);
+      const matchesStatus = statusValue === 'all' || status === statusValue;
+      
+      card.style.display = matchesSearch && matchesStatus ? 'block' : 'none';
+    });
+
+    // Sort visible tasks
+    const visibleCards = cards.filter(card => card.style.display !== 'none');
+    visibleCards.sort((a, b) => {
+      if (sortValue === 'newest') {
+        return new Date(b.dataset.created) - new Date(a.dataset.created);
+      } else if (sortValue === 'oldest') {
+        return new Date(a.dataset.created) - new Date(b.dataset.created);
+      } else if (sortValue === 'status') {
+        return a.dataset.status.localeCompare(b.dataset.status);
+      }
+    });
+
+    // Reorder cards in DOM
+    visibleCards.forEach(card => {
+      card.parentNode.appendChild(card);
+    });
+  }
+
+  function toggleParameters(taskId) {
+    const params = document.getElementById(`params_${taskId}`);
+    params.classList.toggle('hidden');
+  }
+
+  async function viewTaskDetails(taskId) {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`);
+      const task = await response.json();
+      
+      const modal = document.getElementById('taskDetailsModal');
+      const content = document.getElementById('taskDetailsContent');
+      
+      // Populate modal content
+      content.innerHTML = `
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-sm font-medium text-gray-400">Description</h4>
+            <p class="text-gray-100">${task.description}</p>
+          </div>
+          <div>
+            <h4 class="text-sm font-medium text-gray-400">Command</h4>
+            <pre class="bg-gray-900 p-3 rounded text-sm text-gray-300">${task.command}</pre>
+          </div>
+          ${task.parameters ? `
+            <div>
+              <h4 class="text-sm font-medium text-gray-400">Parameters</h4>
+              <pre class="bg-gray-900 p-3 rounded text-sm text-gray-300">${task.parameters}</pre>
+            </div>
+          ` : ''}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-sm font-medium text-gray-400">Created</h4>
+              <p class="text-gray-300">${new Date(task.created_at).toLocaleString()}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-400">Status</h4>
+              <span class="px-2 py-1 rounded-full text-xs font-medium
+                ${task.status === 'completed' ? 'bg-green-900/50 text-green-400' :
+                  task.status === 'failed' ? 'bg-red-900/50 text-red-400' :
+                  task.status === 'in_progress' ? 'bg-blue-900/50 text-blue-400' :
+                  'bg-yellow-900/50 text-yellow-400'}">
+                ${task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    } catch (error) {
+      console.error('Error fetching task details:', error);
+      alert('Failed to load task details');
+    }
+  }
+
+  function closeTaskDetails() {
+    document.getElementById('taskDetailsModal').classList.add('hidden');
+  }
+
+  function toggleSection(sectionId) {
+    const content = document.getElementById(`${sectionId}_content`);
+    const icon = document.getElementById(`${sectionId}_icon`);
+    content.classList.toggle('hidden');
+    icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
+  // Event listeners
+  searchInput.addEventListener('input', filterAndSortTasks);
+  statusFilter.addEventListener('change', filterAndSortTasks);
+  sortFilter.addEventListener('change', filterAndSortTasks);
+
+  // Close modal when clicking outside
+  document.getElementById('taskDetailsModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      closeTaskDetails();
+    }
+  });
+
+  // Initialize tooltips only if tippy is available
+  if (typeof tippy !== 'undefined') {
+    document.querySelectorAll('[title]').forEach(element => {
+      tippy(element, {
+        theme: 'dark',
+        animation: 'shift-away'
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

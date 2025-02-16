@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}System Enumeration - {{ agent_id }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-[2000px] mx-auto space-y-6">
+  <!-- Header Section -->
+  <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/10 p-6 shadow-lg">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="bg-black/30 p-3 rounded-lg ring-1 ring-purple-500/20">
+          <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-100">System Enumeration</h1>
+          <p class="text-gray-400 text-sm mt-1">Agent: {{ agent_id }}</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('agent_data', agent_id=agent_id) }}" 
+           class="flex items-center gap-2 px-4 py-2 bg-gray-900/50 hover:bg-gray-900/80 rounded-lg transition-all text-gray-300 hover:text-gray-100">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Raw Data Section (Hidden by default) -->
+  <div id="rawData" class="hidden bg-black/20 p-4 rounded-lg mb-6">
+    <pre class="text-gray-300 text-sm overflow-x-auto">{{ records|tojson(indent=2) }}</pre>
+  </div>
+
+  <!-- Enumeration Data -->
+  {% for record in records %}
+    {% set enum_data = record.payload %}
+    {% if enum_data %}
+      <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/10 p-6">
+        <!-- Environment Info Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Browser Environment -->
+          <div class="bg-black/20 rounded-xl p-6 space-y-4">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 rounded-lg bg-purple-500/10">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-purple-400">Browser Environment</h3>
+            </div>
+            <div class="space-y-2">
+              {% for key, value in enum_data.browser.items() %}
+                <div class="flex justify-between items-start gap-4 text-sm">
+                  <span class="text-gray-400">{{ key }}</span>
+                  <span class="text-gray-200 text-right break-all">{{ value }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Screen Properties -->
+          <div class="bg-black/20 rounded-xl p-6 space-y-4">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 rounded-lg bg-blue-500/10">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-blue-400">Screen Properties</h3>
+            </div>
+            <div class="space-y-2">
+              {% for key, value in enum_data.screen.items() %}
+                <div class="flex justify-between items-start gap-4 text-sm">
+                  <span class="text-gray-400">{{ key }}</span>
+                  <span class="text-gray-200">{{ value }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Hardware Information -->
+          <div class="bg-black/20 rounded-xl p-6 space-y-4">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 rounded-lg bg-yellow-500/10">
+                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-yellow-400">Hardware Information</h3>
+            </div>
+            <div class="space-y-2">
+              {% for key, value in enum_data.hardware.items() %}
+                <div class="flex justify-between items-start gap-4 text-sm">
+                  <span class="text-gray-400">{{ key }}</span>
+                  <span class="text-gray-200">{{ value }}</span>
+                </div>
+              {% endfor %}
+            </div>
+            
+            <!-- GPU Information -->
+            <div class="mt-4 pt-4 border-t border-gray-700/50">
+              <h4 class="text-md font-semibold text-yellow-400 mb-3">GPU Details</h4>
+              <div class="space-y-2">
+                {% for key, value in enum_data.gpu.items() %}
+                  <div class="flex justify-between items-start gap-4 text-sm">
+                    <span class="text-gray-400">{{ key }}</span>
+                    <span class="text-gray-200">{{ value }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Capabilities -->
+        <div class="mt-6 bg-black/20 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 rounded-lg bg-green-500/10">
+              <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-green-400">System Capabilities</h3>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {% for key, value in enum_data.capabilities.items() %}
+              <div class="bg-black/30 rounded-lg p-4">
+                <span class="text-gray-300 text-sm block mb-2">{{ key }}</span>
+                {% if value %}
+                  <span class="px-2 py-1 rounded-full bg-green-500/10 text-green-400 text-xs">Supported</span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full bg-red-500/10 text-red-400 text-xs">Not Supported</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Installed Extensions -->
+        <div class="mt-6 bg-black/20 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 rounded-lg bg-purple-500/10">
+              <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-purple-400">Installed Extensions</h3>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if enum_data.extensions %}
+              {% for ext in enum_data.extensions %}
+                <div class="bg-black/30 rounded-lg p-4">
+                  <div class="text-sm">
+                    <span class="text-purple-400 font-medium">{{ ext.name }}</span>
+                    <span class="text-gray-400 text-xs ml-2">v{{ ext.version }}</span>
+                  </div>
+                  <p class="text-gray-400 text-xs mt-1">{{ ext.description }}</p>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-gray-400 text-sm">No extensions detected</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Timestamp -->
+        <div class="mt-6 pt-4 border-t border-gray-700/50 flex justify-between items-center text-sm text-gray-400">
+          <span>Collected: {{ enum_data.timestamp|format_datetime }}</span>
+          <span>Timezone: {{ enum_data.timezone }}</span>
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %} 

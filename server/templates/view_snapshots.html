@@ -1,0 +1,325 @@
+{% extends "data_type_base.html" %}
+
+{% block type_specific_content %}
+<div class="space-y-6 max-w-full">
+  <!-- Stats and Filters Bar -->
+  <div class="bg-gray-800 p-4 rounded-lg shadow-lg overflow-x-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 md:space-x-4 min-w-max">
+      <div class="flex-1">
+        <input type="text" 
+               id="snapshotSearch" 
+               placeholder="Search snapshots by URL or content..." 
+               class="w-full bg-gray-700 text-gray-100 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="toggleHttpsOnly()" 
+                id="httpsFilter"
+                class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center space-x-2">
+          <span>🔒</span>
+          <span>HTTPS Only</span>
+          <span id="httpsCount" class="ml-2 bg-gray-600 px-2 rounded-full text-xs"></span>
+        </button>
+        <button id="expandAllBtn"
+                onclick="toggleAllSnapshots()"
+                class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center space-x-2">
+          <span id="expandAllIcon">🔽</span>
+          <span id="expandAllText">Expand All</span>
+        </button>
+        <button onclick="toggleLineNumbers()"
+                id="lineNumbersToggle"
+                class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors">
+          Toggle Line Numbers
+        </button>
+      </div>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-4 text-sm text-gray-400">
+      <div id="totalStats"></div>
+      <div id="httpsStats"></div>
+      <div id="visibleStats"></div>
+    </div>
+  </div>
+
+  <!-- URL Quick Jump -->
+  <div class="bg-gray-800 p-4 rounded-lg shadow-lg overflow-x-auto">
+    <h3 class="text-sm font-medium text-gray-400 mb-2">Quick Jump to URL</h3>
+    <div id="urlTags" class="flex flex-wrap gap-2 min-w-max">
+      <!-- Filled by JavaScript -->
+    </div>
+  </div>
+
+  <div class="space-y-4" id="snapshotsContainer">
+    {% for record in records %}
+      {% set payload = record.payload|from_json %}
+      <div class="snapshot-card bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-gray-700 bg-gray-750 gap-4">
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg font-medium text-gray-200 truncate" title="{{ payload.location }}">
+              <span class="text-purple-400">URL:</span> {{ payload.location }}
+            </h3>
+            <p class="text-sm text-gray-400">{{ record.timestamp }}</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <button onclick="copySnapshot('{{ loop.index }}')"
+                    class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors">
+              Copy
+            </button>
+            <button onclick="toggleSnapshot('snapshot-{{ loop.index }}')"
+                    class="toggle-btn px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors">
+              View DOM
+            </button>
+            <button onclick="previewSnapshot('{{ loop.index }}')"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md text-sm transition-colors">
+              Preview
+            </button>
+          </div>
+        </div>
+        
+        <div id="snapshot-{{ loop.index }}" class="hidden">
+          <div class="p-4 bg-gray-900 relative">
+            <div class="absolute right-4 top-4 flex space-x-2 z-10">
+              <button onclick="formatCode('snapshot-content-{{ loop.index }}')"
+                      class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-xs transition-colors">
+                Format
+              </button>
+              <button onclick="minifyCode('snapshot-content-{{ loop.index }}')"
+                      class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-xs transition-colors">
+                Minify
+              </button>
+            </div>
+            <pre id="snapshot-content-{{ loop.index }}" 
+                 class="text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap mt-8 line-numbers max-h-[70vh] min-h-[200px]">{{ payload.snapshot }}</pre>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 overflow-hidden">
+  <div class="absolute inset-0 flex flex-col p-2 sm:p-4">
+    <div class="flex justify-between items-center bg-gray-800 p-4 rounded-t-lg">
+      <h3 class="text-lg font-medium text-gray-200">DOM Preview</h3>
+      <button onclick="closePreview()" class="text-gray-400 hover:text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="flex-1 bg-white rounded-b-lg overflow-hidden">
+      <iframe id="previewFrame" class="w-full h-full"></iframe>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.3/purify.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('snapshotSearch');
+  let allExpanded = false;
+  let showLineNumbers = true;
+  let httpsOnly = false;
+
+  // Initialize
+  updateStats();
+  initializeUrlTags();
+
+  function updateStats() {
+    const allSnapshots = document.querySelectorAll('.snapshot-card');
+    const httpsSnapshots = document.querySelectorAll('.snapshot-card[data-protocol="https"]');
+    const visibleSnapshots = document.querySelectorAll('.snapshot-card:not([style*="display: none"])');
+    
+    document.getElementById('totalStats').textContent = 
+      `Total Snapshots: ${allSnapshots.length}`;
+    document.getElementById('httpsStats').textContent = 
+      `HTTPS: ${httpsSnapshots.length}`;
+    document.getElementById('visibleStats').textContent = 
+      `Visible: ${visibleSnapshots.length}`;
+    
+    document.getElementById('httpsCount').textContent = httpsSnapshots.length;
+  }
+
+  function initializeUrlTags() {
+    const urlTags = document.getElementById('urlTags');
+    const urls = new Set();
+    
+    document.querySelectorAll('.snapshot-card').forEach(card => {
+      try {
+        const urlString = card.dataset.url;
+        if (urlString) {
+          const url = new URL(urlString);
+          urls.add(url.hostname);
+        }
+      } catch (e) {
+        console.warn('Invalid URL:', card.dataset.url);
+      }
+    });
+
+    urls.forEach(url => {
+      const tag = document.createElement('button');
+      tag.className = 'px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm';
+      tag.textContent = url;
+      tag.onclick = () => {
+        searchInput.value = url;
+        filterSnapshots();
+      };
+      urlTags.appendChild(tag);
+    });
+  }
+
+  // Make functions globally available
+  window.toggleSnapshot = function(id) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    
+    const isHidden = element.classList.contains('hidden');
+    element.classList.toggle('hidden');
+    
+    // Toggle animation classes
+    if (isHidden) {
+      element.classList.add('animate-expand');
+      setTimeout(() => element.classList.remove('animate-expand'), 300);
+    } else {
+      element.classList.add('animate-collapse');
+      setTimeout(() => element.classList.remove('animate-collapse'), 300);
+    }
+  };
+
+  window.previewSnapshot = function(index) {
+    const content = document.getElementById(`snapshot-content-${index}`);
+    if (!content) return;
+    
+    const modal = document.getElementById('previewModal');
+    const iframe = document.getElementById('previewFrame');
+    const card = content.closest('.snapshot-card');
+    const baseUrl = card.dataset.url || '';
+    
+    modal.classList.remove('hidden');
+    
+    // Create a blob with the full HTML content
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <base href="${baseUrl}">
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { margin: 0; padding: 0; }
+            * { box-sizing: border-box; }
+          </style>
+        </head>
+        <body>
+          ${DOMPurify.sanitize(content.textContent, {
+            ADD_TAGS: ['script', 'style'],
+            ADD_ATTR: ['src', 'href', 'rel', 'type'],
+            FORCE_BODY: true
+          })}
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    iframe.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+    };
+    
+    iframe.src = blobUrl;
+  };
+
+  window.closePreview = function() {
+    const modal = document.getElementById('previewModal');
+    modal.classList.add('hidden');
+  };
+
+  window.copySnapshot = function(index) {
+    const content = document.getElementById(`snapshot-content-${index}`);
+    if (!content) return;
+    
+    navigator.clipboard.writeText(content.textContent).then(() => {
+      showNotification('DOM snapshot copied to clipboard!');
+    }).catch(err => {
+      showNotification('Failed to copy snapshot!', true);
+      console.error('Copy failed:', err);
+    });
+  };
+
+  function showNotification(message, isError = false) {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ${
+      isError ? 'bg-red-500' : 'bg-green-500'
+    } text-white z-50`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 2000);
+  }
+
+  function filterSnapshots() {
+    const searchTerm = searchInput.value.toLowerCase();
+    document.querySelectorAll('.snapshot-card').forEach(card => {
+      const url = card.dataset.url.toLowerCase();
+      const content = card.querySelector('pre')?.textContent.toLowerCase() || '';
+      const isHttps = card.dataset.protocol === 'https';
+      
+      const matchesSearch = url.includes(searchTerm) || content.includes(searchTerm);
+      const matchesProtocol = !httpsOnly || isHttps;
+      
+      card.style.display = (matchesSearch && matchesProtocol) ? '' : 'none';
+    });
+    updateStats();
+  }
+
+  window.toggleHttpsOnly = function() {
+    httpsOnly = !httpsOnly;
+    document.getElementById('httpsFilter').classList.toggle('bg-purple-600');
+    filterSnapshots();
+  };
+
+  // Event Listeners
+  searchInput.addEventListener('input', filterSnapshots);
+
+  // Close preview on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closePreview();
+    }
+  });
+});
+</script>
+
+<style>
+.animate-expand {
+  animation: expand 0.3s ease-out;
+}
+
+.animate-collapse {
+  animation: collapse 0.3s ease-out;
+}
+
+@keyframes expand {
+  from { opacity: 0; transform: scaleY(0); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
+@keyframes collapse {
+  from { opacity: 1; transform: scaleY(1); }
+  to { opacity: 0; transform: scaleY(0); }
+}
+
+/* Add these responsive styles */
+@media (max-width: 640px) {
+  .snapshot-card pre {
+    font-size: 0.75rem;
+    max-height: 50vh;
+  }
+  
+  .snapshot-card .button-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+</style>
+{% endblock %}
