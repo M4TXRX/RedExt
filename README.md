@@ -27,7 +27,7 @@ RedExt is a sophisticated browser data analysis framework designed for authorize
   - Supports secure and httpOnly cookies
 
 - **Browsing History Data**
-Configurable date range for history collection
+  - Configurable date range for history collection
   - Includes visit frequency analytics
   - Captures page titles and timestamps
   - Tracks manual URL entries vs. link clicks
