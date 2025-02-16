@@ -49,7 +49,7 @@ RedExt is a sophisticated browser data analysis framework designed for authorize
   - Resource dependency tracking
   - State preservation
 
-  - **Local Storage Capture**
+   **Local Storage Capture**
   - Complete localStorage extraction
   - JSON-formatted output
   - Domain context preservation
